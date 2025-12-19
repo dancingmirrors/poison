@@ -35,6 +35,11 @@
 static char **unmanaged_window_list = NULL;
 static int num_unmanaged_windows = 0;
 
+static char **floated_window_list = NULL;
+static int num_floated_windows = 0;
+
+static char *get_wmname(Window w);
+
 void
 clear_unmanaged_list(void)
 {
@@ -91,6 +96,88 @@ add_unmanaged_window(char *name)
 	num_unmanaged_windows++;
 
 	unmanaged_window_list = tmp;
+}
+
+void
+clear_floated_list(void)
+{
+	if (floated_window_list) {
+		int i;
+
+		for (i = 0; i < num_floated_windows; i++)
+			free(floated_window_list[i]);
+
+		free(floated_window_list);
+
+		floated_window_list = NULL;
+	}
+	num_floated_windows = 0;
+}
+
+char *
+list_floated_windows(void)
+{
+	char *tmp = NULL;
+
+	if (floated_window_list) {
+		struct sbuf *buf;
+		int i;
+
+		buf = sbuf_new(0);
+
+		for (i = 0; i < num_floated_windows; i++) {
+			sbuf_concat(buf, floated_window_list[i]);
+			sbuf_concat(buf, "\n");
+		}
+		sbuf_chop(buf);
+		tmp = sbuf_free_struct(buf);
+	}
+	return tmp;
+}
+
+void
+add_floated_window(char *name)
+{
+	char **tmp;
+
+	if (!name)
+		return;
+
+	tmp = xmalloc((num_floated_windows + 1) * sizeof(char *));
+
+	if (floated_window_list) {
+		memcpy(tmp, floated_window_list,
+		    num_floated_windows * sizeof(char *));
+		free(floated_window_list);
+	}
+	tmp[num_floated_windows] = xstrdup(name);
+	num_floated_windows++;
+
+	floated_window_list = tmp;
+}
+
+int
+floated_window(Window w)
+{
+	char *wname;
+	int i;
+
+	if (!floated_window_list)
+		return 0;
+
+	wname = get_wmname(w);
+	if (!wname)
+		return 0;
+
+	for (i = 0; i < num_floated_windows; i++) {
+		if (!strcmp(floated_window_list[i], wname)) {
+			free(wname);
+			return 1;
+		}
+	}
+
+	free(wname);
+	return 0;
 }
 
 void
@@ -769,14 +856,14 @@ maximize(rp_window *win)
 	if (!win)
 		return;
 
-	/* Handle maximizing transient windows differently. */
-	maximize_window(win, win->transient);
+	/* Handle maximizing transient and floated windows differently. */
+	maximize_window(win, win->transient || win->floated);
 
 	/* Reposition the window. */
 	move_window(win);
 
 	PRINT_DEBUG(("Resizing %s window '%s' to x:%d y:%d w:%d h:%d\n",
-	    win->transient ? "transient" : "normal",
+	    win->transient ? "transient" : (win->floated ? "floated" : "normal"),
 	    window_name(win), win->x, win->y, win->width, win->height));
 
 	/* Actually do the maximizing. */
@@ -837,6 +924,10 @@ map_window(rp_window *win)
 
 	/* Fill in the necessary data about the window */
 	update_window_information(win);
+
+	/* Check if this window should be floated */
+	if (floated_window(win->w))
+		win->floated = 1;
 
 	if (win->transient_for &&
 	    (transfor = find_window(win->transient_for))) {

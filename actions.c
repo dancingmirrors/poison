@@ -174,6 +174,7 @@ static cmdret *cmd_banish(int interactive, struct cmdarg **args);
 static cmdret *cmd_banishrel(int interactive, struct cmdarg **args);
 static cmdret *cmd_chdir(int interactive, struct cmdarg **args);
 static cmdret *cmd_clrunmanaged(int interactive, struct cmdarg **args);
+static cmdret *cmd_clrfloated(int interactive, struct cmdarg **args);
 static cmdret *cmd_cnext(int interactive, struct cmdarg **args);
 static cmdret *cmd_colon(int interactive, struct cmdarg **args);
 static cmdret *cmd_commands(int interactive, struct cmdarg **args);
@@ -197,6 +198,7 @@ static cmdret *cmd_execf(int interactive, struct cmdarg **args);
 static cmdret *cmd_execv(int interactive, struct cmdarg **args);
 static cmdret *cmd_execw(int interactive, struct cmdarg **args);
 static cmdret *cmd_fdump(int interactive, struct cmdarg **args);
+static cmdret *cmd_float(int interactive, struct cmdarg **args);
 static cmdret *cmd_focusdown(int interactive, struct cmdarg **args);
 static cmdret *cmd_focuslast(int interactive, struct cmdarg **args);
 static cmdret *cmd_focusleft(int interactive, struct cmdarg **args);
@@ -414,6 +416,7 @@ init_user_commands(void)
 	add_command("chdir",		cmd_chdir,	1, 0, 0,
 	            "Dir: ", arg_REST);
 	add_command("clrunmanaged",	cmd_clrunmanaged, 0, 0, 0);
+	add_command("clrfloated",	cmd_clrfloated, 0, 0, 0);
 	add_command("cnext",		cmd_cnext,	0, 0, 0);
 	add_command("colon",		cmd_colon,	1, 0, 0,
 	            "", arg_REST);
@@ -454,6 +457,8 @@ init_user_commands(void)
 	            "/bin/sh -c ", arg_SHELLCMD);
 	add_command("fdump",		cmd_fdump,	1, 0, 0,
 	            "", arg_NUMBER);
+	add_command("float",		cmd_float,	1, 1, 0,
+                    "Float: ", arg_REST);
 	add_command("focus",		cmd_nextframe,	0, 0, 0);
 	add_command("focusdown",	cmd_focusdown,	0, 0, 0);
 	add_command("focusprev",	cmd_prevframe,	0, 0, 0);
@@ -1222,6 +1227,40 @@ cmdret *
 cmd_clrunmanaged(int interactive, struct cmdarg **args)
 {
 	clear_unmanaged_list();
+	return cmdret_new(RET_SUCCESS, NULL);
+}
+
+/* Float window */
+cmdret *
+cmd_float(int interactive, struct cmdarg **args)
+{
+	if (args[0] == NULL && !interactive) {
+		cmdret *ret;
+		char *s = list_floated_windows();
+
+		if (s)
+			ret = cmdret_new(RET_SUCCESS, "%s", s);
+		else
+			ret = cmdret_new(RET_SUCCESS, NULL);
+
+		free(s);
+		return ret;
+	}
+
+	if (!args[0])
+		return cmdret_new(RET_FAILURE,
+		    "float: at least one argument required");
+
+	add_floated_window(ARG_STRING(0));
+
+	return cmdret_new(RET_SUCCESS, NULL);
+}
+
+/* Clear the floated window list */
+cmdret *
+cmd_clrfloated(int interactive, struct cmdarg **args)
+{
+	clear_floated_list();
 	return cmdret_new(RET_SUCCESS, NULL);
 }
 

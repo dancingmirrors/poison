@@ -193,6 +193,8 @@ If nothing is given, change it to the value of the environment variable
 .Qq Ev HOME .
 .It Ic clrunmanaged
 Clears the unmanaged window list.
+.It Ic clrfloated
+Clears the floated window list.
 .It Ic cnext
 Like
 .Ic next
@@ -367,6 +369,21 @@ Output the defining data for all frames of the current screen, or
 for screen number
 .Ar screenno
 if this is specified.
+.It Ic float Op Ar name
+Add
+.Ar name
+to the list of floated windows.
+Windows in this list will be displayed in a floating (centered) style
+like transient windows, but remain fully managed by the window manager,
+allowing normal window operations like switching, focusing, and closing.
+This is useful for applications like
+.Nm glxgears
+that don't need to be fullscreen tiled but should remain controllable.
+.Pp
+In non\-interactive mode calling it without arguments will print the list.
+.Pp
+The list can be cleared again by calling
+.Ic clrfloated .
 .It Ic focus Pq Ic C\-a Tab
 Focus the next frame.
 .It Ic focuslast

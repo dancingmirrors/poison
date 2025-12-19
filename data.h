@@ -108,6 +108,9 @@ struct rp_window {
 	int transient;
 	Window transient_for;
 
+	/* Is this a floated window? */
+	int floated;
+
 	/* Saved mouse position */
 	int mouse_x, mouse_y;
 
