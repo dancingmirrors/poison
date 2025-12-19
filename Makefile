@@ -7,7 +7,7 @@ VERSION!=	[ -d .git ] && \
 CC?=		cc
 PREFIX?=	/usr/local
 PKGLIBS=	x11 xft xrandr xtst xres freetype2
-CFLAGS+=	-O2 -Wall \
+CFLAGS+=	-O2 -Wall -Wextra -Wno-unused-parameter \
 		-Wunused -Wmissing-prototypes -Wstrict-prototypes \
 		`pkg-config --cflags ${PKGLIBS}` \
 		-DVERSION=\"${VERSION}\"
