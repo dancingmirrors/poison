@@ -381,8 +381,16 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	 * are different windows.
 	 */
 	if (last_win != NULL && win != last_win) {
-		if (last_win->full_screen)
-			window_full_screen(NULL);
+		if (last_win->full_screen) {
+			/*
+			 * Clear the screen's fullscreen window tracker and
+			 * restore the bar, but keep the window's fullscreen
+			 * flag so it can be restored when we switch back.
+			 */
+			rp_current_screen->full_screen_win = NULL;
+			if (defaults.bar_timeout != 0)
+				hide_bar(rp_current_screen, 0);
+		}
 		save_mouse_position(last_win);
 		XSetWindowBorder(dpy, last_win->w, rp_glob_screen.bwcolor);
 	}
@@ -409,6 +417,15 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	rp_current_screen = win->vscreen->screen;
 	rp_current_screen->current_vscreen = win->vscreen;
 	set_rp_window_focus(win);
+
+	/*
+	 * If the window being focused is fullscreen, restore it as the
+	 * screen's active fullscreen window.
+	 */
+	if (win->full_screen) {
+		rp_current_screen->full_screen_win = win;
+		hide_bar(rp_current_screen, 1);
+	}
 
 	raise_utility_windows();
 
