@@ -139,7 +139,7 @@ xrandr_fill_screen(int rr_output, rp_screen *screen)
 		goto free_out;
 
 	primary = XRRGetOutputPrimary(dpy, RootWindow(dpy, DefaultScreen(dpy)));
-	if (rr_output == primary)
+	if ((RROutput)rr_output == primary)
 		screen->xrandr.primary = 1;
 	else
 		screen->xrandr.primary = 0;

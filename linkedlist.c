@@ -312,7 +312,7 @@ list_sort(void *priv, struct list_head *head,
 			part[lev] = NULL;
 		}
 		if (lev > max_lev) {
-			if (lev >= ARRAY_SIZE(part) - 1) {
+			if ((size_t)lev >= ARRAY_SIZE(part) - 1) {
 				lev--;
 			}
 			max_lev = lev;

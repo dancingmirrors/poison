@@ -528,7 +528,7 @@ bar_handle_click(rp_screen *s, XButtonEvent *e)
 
 			PRINT_DEBUG(("chunk: btn:%d cmd:%s\n", btn, actcmd));
 
-			if (e->button == btn) {
+			if (e->button == (unsigned int)btn) {
 				PRINT_DEBUG(("executing bar click action %s\n",
 				    actcmd));
 				spawn(actcmd, current_frame(rp_current_vscreen));

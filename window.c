@@ -143,7 +143,7 @@ get_child_info(Window w, int add)
 
 	if (pid) {
 		list_for_each_entry(cur, &rp_children, node)
-			if (pid == cur->pid)
+			if (pid == (unsigned long)cur->pid)
 				return cur;
 	}
 

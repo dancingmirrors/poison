@@ -347,7 +347,7 @@ rp_get_font(rp_screen *s, char *font)
 void
 rp_clear_cached_fonts(rp_screen *s)
 {
-	int x;
+	size_t x;
 
 	for (x = 0; x < (sizeof(s->xft_font_cache) / sizeof(struct rp_font));
 	    x++) {
@@ -641,8 +641,8 @@ get_atom(Window w, Atom a, Atom type, unsigned long off, unsigned long *ret,
     unsigned long nitems, unsigned long *left)
 {
 	Atom real_type;
-	int i, real_format = 0;
-	unsigned long items_read = 0;
+	int real_format = 0;
+	unsigned long i, items_read = 0;
 	unsigned long bytes_left = 0;
 	unsigned long *p;
 	unsigned char *data;

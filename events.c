@@ -424,7 +424,7 @@ client_msg(XClientMessageEvent *ev)
 		PRINT_DEBUG(("_NET_WM_STATE for window 0x%lx, action %ld, "
 		    "property 0x%lx\n", win->w, ev->data.l[0], ev->data.l[1]));
 
-		if (ev->data.l[1] == _net_wm_state_fullscreen) {
+		if ((Atom)ev->data.l[1] == _net_wm_state_fullscreen) {
 			if (ev->data.l[0] == _NET_WM_STATE_ADD ||
 			    (ev->data.l[0] == _NET_WM_STATE_TOGGLE &&
 			    win->full_screen == 0))
@@ -630,7 +630,7 @@ mapping_notify(XMappingEvent *ev)
 	switch (ev->request) {
 	case MappingModifier:
 		update_modifier_map();
-		/* This is meant to fall through.  */
+		/* FALLTHROUGH */
 	case MappingKeyboard:
 		XRefreshKeyboardMapping(ev);
 		break;
