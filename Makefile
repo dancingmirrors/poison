@@ -20,7 +20,7 @@ LDFLAGS+=	`pkg-config --libs ${PKGLIBS}`
 #CFLAGS+=	-DSENDCMD_DEBUG=1
 
 BINDIR=		${DESTDIR}$(PREFIX)/bin
-MANDIR?=	${DESTDIR}$(PREFIX)/man/man1
+MANDIR?=	${DESTDIR}$(PREFIX)/share/man/man1
 
 SRC!=		ls *.c
 OBJ=		${SRC:.c=.o}
