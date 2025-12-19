@@ -407,6 +407,7 @@ int
 window_is_transient(rp_window *win)
 {
 	return win->transient
+	|| win->floated
 #ifdef ASPECT_WINDOWS_ARE_TRANSIENTS
 	|| win->hints->flags & PAspect
 #endif
@@ -857,7 +858,7 @@ maximize(rp_window *win)
 		return;
 
 	/* Handle maximizing transient and floated windows differently. */
-	maximize_window(win, win->transient || win->floated);
+	maximize_window(win, window_is_transient(win));
 
 	/* Reposition the window. */
 	move_window(win);

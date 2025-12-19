@@ -61,7 +61,7 @@ free_window(rp_window *w)
 void
 update_window_gravity(rp_window *win)
 {
-	if (win->transient || win->floated)
+	if (window_is_transient(win))
 		win->gravity = defaults.trans_gravity;
 	else if (win->hints->flags & PMaxSize || win->hints->flags & PAspect)
 		win->gravity = defaults.maxsize_gravity;
