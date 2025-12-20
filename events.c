@@ -118,8 +118,7 @@ unmap_notify(XEvent *ev)
 	case IconicState:
 		PRINT_DEBUG(("Withdrawing iconized window '%s'\n",
 		    window_name(win)));
-		if (ev->xunmap.send_event)
-			withdraw_window(win);
+		withdraw_window(win);
 		break;
 	case NormalState:
 		PRINT_DEBUG(("Withdrawing normal window '%s'\n",
@@ -149,10 +148,33 @@ static void
 map_request(Window window)
 {
 	rp_window *win;
+	XWindowAttributes attr;
+	rp_screen *screen;
 
 	win = find_window(window);
 	if (win == NULL) {
 		PRINT_DEBUG(("Map request from an unknown window.\n"));
+
+		/* Check if this is a window we should manage */
+		if (XGetWindowAttributes(dpy, window, &attr) &&
+		    !is_rp_window(window) &&
+		    attr.override_redirect == False &&
+		    !unmanaged_window(window)) {
+			PRINT_DEBUG(("Managing previously unknown window.\n"));
+
+			/* Find the appropriate screen for this window */
+			screen = find_screen_by_attr(attr);
+			if (!screen)
+				list_first(screen, &rp_screens, node);
+
+			/* Add the window to our window list */
+			win = add_to_window_list(screen, window);
+
+			/* Map the window through our normal process */
+			map_window(win);
+			return;
+		}
+
 		XMapWindow(dpy, window);
 		return;
 	}
