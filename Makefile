@@ -1,7 +1,7 @@
 VERSION=	1.6
 
 VERSION!=	[ -d .git ] && \
-		echo "git-`git rev-list --abbrev-commit --tags --max-count=1`" || \
+		echo "git-`git describe --always --abbrev=0`" || \
 		echo "${VERSION}"
 
 CC?=		cc
