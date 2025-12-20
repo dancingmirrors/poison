@@ -450,15 +450,10 @@ is_unmanaged_window_type(Window win)
 	tmp.w = win;
 	win_type = get_net_wm_window_type(&tmp);
 	if (win_type == _net_wm_window_type_dock ||
+	    win_type == _net_wm_window_type_splash ||
 	    win_type == _net_wm_window_type_tooltip ||
 	    win_type == _net_wm_window_type_utility)
 		return 1;
-
-	/*
-	 * Note: _net_wm_window_type_splash is NOT included here.
-	 * We want to track splash windows so users can consistently
-	 * switch to them, even if they don't accept input yet.
-	 */
 
 	return 0;
 }
