@@ -251,7 +251,10 @@ map_request(Window window)
 		}
 
 		/* Depending on the rudeness level, actually map the window. */
-		if (win->last_access == 0) {
+		if (!win->accepts_input) {
+			/* Windows that don't accept input are blocked from mapping */
+			show_rudeness_msg(win, win->last_access == 0 ? 0 : 1);
+		} else if (win->last_access == 0) {
 			if ((rp_honour_transient_map && win->transient)
 			    || (rp_honour_normal_map && !win->transient)) {
 				set_current_vscreen(win->vscreen);

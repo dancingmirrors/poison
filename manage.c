@@ -991,7 +991,10 @@ map_window(rp_window *win)
 	set_state(win, IconicState);
 
 	/* Depending on the rudeness level, actually map the window. */
-	if ((rp_honour_transient_map && win->transient)
+	if (!win->accepts_input) {
+		/* Windows that don't accept input are blocked from mapping */
+		show_rudeness_msg(win, 0);
+	} else if ((rp_honour_transient_map && win->transient)
 	    || (rp_honour_normal_map && !win->transient))
 		set_active_window(win);
 	else
