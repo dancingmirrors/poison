@@ -285,9 +285,17 @@ struct rp_hook_db_entry rp_hook_db[] =
 void
 set_rp_window_focus(rp_window *win)
 {
-	PRINT_DEBUG(("Giving focus to '%s'\n", window_name(win)));
-	XSetInputFocus(dpy, win->w,
-	    RevertToPointerRoot, CurrentTime);
+	PRINT_DEBUG(("Giving focus to '%s' (accepts_input: %d)\n",
+	    window_name(win), win->accepts_input));
+
+	/*
+	 * Only set input focus if the window accepts it. Some windows
+	 * explicitly say they don't accept input.
+	 */
+	if (win->accepts_input) {
+		XSetInputFocus(dpy, win->w,
+		    RevertToPointerRoot, CurrentTime);
+	}
 	set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
 	    &win->w, 1);
 }

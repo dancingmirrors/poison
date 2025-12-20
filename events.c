@@ -26,6 +26,7 @@
 #include <err.h>
 #include <unistd.h>
 #include <poll.h>
+#include <time.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 
@@ -103,13 +104,13 @@ unmap_notify(XEvent *ev)
 	rp_frame *frame;
 	rp_window *win;
 
-	/* ignore SubstructureNotify unmaps. */
+	/* Ignore SubstructureNotify unmaps. */
 	if (ev->xunmap.event != ev->xunmap.window
 	    && ev->xunmap.send_event != True)
 		return;
 
-	/* FIXME: Should we only look in the mapped window list? */
-	win = find_window_in_list(ev->xunmap.window, &rp_mapped_window);
+	 /* Search both mapped and unmapped window lists. */
+	win = find_window(ev->xunmap.window);
 
 	if (win == NULL)
 		return;
@@ -139,6 +140,44 @@ unmap_notify(XEvent *ev)
 		}
 		withdraw_window(win);
 		break;
+	case WithdrawnState:
+		/*
+		 * Window is already withdrawn but received an unmap event.
+		 * Strategy: Check if window still exists AND how long it's been withdrawn.
+		 */
+		PRINT_DEBUG(("Unmap event for already withdrawn window '%s'\n",
+		    window_name(win)));
+
+		/* Check how long the window has been withdrawn */
+		{
+			time_t now = time(NULL);
+			time_t withdrawn_duration = now - win->withdrawn_at;
+
+			PRINT_DEBUG(("Window has been withdrawn for %ld seconds\n",
+			    (long)withdrawn_duration));
+
+			/* If withdrawn for more than 1 second, unmanage it */
+			if (withdrawn_duration > 1) {
+				PRINT_DEBUG(("Window withdrawn too long, unmanaging\n"));
+				unmanage(win);
+				return;
+			}
+
+			/* Otherwise, check if window still exists */
+			XWindowAttributes attr;
+			ignore_badwindow++;
+			int exists = XGetWindowAttributes(dpy, win->w, &attr);
+			ignore_badwindow--;
+
+			if (!exists) {
+				PRINT_DEBUG(("Window no longer exists, unmanaging\n"));
+				unmanage(win);
+				return;
+			}
+		}
+
+		PRINT_DEBUG(("Window still exists and recently withdrawn, keeping tracked\n"));
+		return;
 	}
 
 	update_window_names(win->vscreen->screen, defaults.window_fmt);
@@ -588,6 +627,9 @@ property_notify(XEvent *ev)
 		update_normal_hints(win);
 		if (win->state == NormalState)
 			maximize(win);
+	} else if (ev->xproperty.atom == XA_WM_HINTS) {
+		PRINT_DEBUG(("updating WM_HINTS (InputHint)\n"));
+		update_window_input_hint(win);
 	} else if (ev->xproperty.atom == XA_WM_TRANSIENT_FOR) {
 		PRINT_DEBUG(("Transient for\n"));
 		win->transient = XGetTransientForHint(dpy, win->w,

@@ -195,6 +195,8 @@ add_to_window_list(rp_screen *s, Window w)
 	PRINT_DEBUG(("transient %d\n", new_window->transient));
 	new_window->full_screen = 0;
 	new_window->floated = 0;
+	new_window->accepts_input = 1;  /* Default to accepting input */
+	new_window->withdrawn_at = 0;  /* Will be set when window is withdrawn */
 
 	update_window_gravity(new_window);
 
@@ -417,6 +419,9 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	/* Finally, give the window focus */
 	rp_current_screen = win->vscreen->screen;
 	rp_current_screen->current_vscreen = win->vscreen;
+
+	/* Refresh InputHint in case it changed since window was mapped */
+	update_window_input_hint(win);
 	set_rp_window_focus(win);
 
 	/*
@@ -429,6 +434,12 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	}
 
 	raise_utility_windows();
+
+	/* Clean up any stale withdrawn windows on focus change */
+	cleanup_withdrawn_windows();
+
+	/* Compact window numbers to eliminate gaps */
+	compact_window_numbers();
 
 	XSync(dpy, False);
 }

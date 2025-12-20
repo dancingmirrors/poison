@@ -43,6 +43,9 @@ int window_is_transient(rp_window *win);
 Atom get_net_wm_window_type(rp_window *win);
 int is_unmanaged_window_type(Window win);
 void update_window_information(rp_window *win);
+void update_window_input_hint(rp_window *win);
+void cleanup_withdrawn_windows(void);
+void compact_window_numbers(void);
 void map_window(rp_window *win);
 
 void maximize(rp_window *win);

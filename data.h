@@ -108,6 +108,12 @@ struct rp_window {
 	int transient;
 	Window transient_for;
 
+	/* Does this window accept input focus (from WM_HINTS)? */
+	int accepts_input;
+
+	/* Timestamp when window was withdrawn (for cleanup of lingering windows) */
+	time_t withdrawn_at;
+
 	/* Is this a floated window? */
 	int floated;
 

@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <err.h>
 
 #include <X11/X.h>
@@ -449,10 +450,15 @@ is_unmanaged_window_type(Window win)
 	tmp.w = win;
 	win_type = get_net_wm_window_type(&tmp);
 	if (win_type == _net_wm_window_type_dock ||
-	    win_type == _net_wm_window_type_splash ||
 	    win_type == _net_wm_window_type_tooltip ||
 	    win_type == _net_wm_window_type_utility)
 		return 1;
+
+	/*
+	 * Note: _net_wm_window_type_splash is NOT included here.
+	 * We want to track splash windows so users can consistently
+	 * switch to them, even if they don't accept input yet.
+	 */
 
 	return 0;
 }
@@ -461,11 +467,23 @@ void
 update_window_information(rp_window *win)
 {
 	XWindowAttributes attr;
+	XWMHints *wm_hints;
 
 	update_window_name(win);
 
 	/* Get the WM Hints */
 	update_normal_hints(win);
+
+	/* Check if window accepts input focus */
+	wm_hints = XGetWMHints(dpy, win->w);
+	if (wm_hints) {
+		if (wm_hints->flags & InputHint) {
+			win->accepts_input = wm_hints->input;
+			PRINT_DEBUG(("Window '%s' accepts_input: %d\n",
+			    window_name(win), win->accepts_input));
+		}
+		XFree(wm_hints);
+	}
 
 	/* Get the colormap */
 	XGetWindowAttributes(dpy, win->w, &attr);
@@ -487,6 +505,26 @@ update_window_information(rp_window *win)
 	    win->transient));
 
 	update_window_gravity(win);
+}
+
+/*
+ * Update the InputHint from WM_HINTS. This can change dynamically as
+ * windows load.
+ */
+void
+update_window_input_hint(rp_window *win)
+{
+	XWMHints *wm_hints;
+
+	wm_hints = XGetWMHints(dpy, win->w);
+	if (wm_hints) {
+		if (wm_hints->flags & InputHint) {
+			win->accepts_input = wm_hints->input;
+			PRINT_DEBUG(("Window '%s' accepts_input updated to: %d\n",
+			    window_name(win), win->accepts_input));
+		}
+		XFree(wm_hints);
+	}
 }
 
 void
@@ -1050,12 +1088,88 @@ withdraw_window(rp_window *win)
 
 	XRemoveFromSaveSet(dpy, win->w);
 	set_state(win, WithdrawnState);
+
+	/* Record the time when this window was withdrawn for cleanup tracking */
+	win->withdrawn_at = time(NULL);
+
 	XSync(dpy, False);
 
 	ignore_badwindow--;
 
 	/* Call our hook */
 	hook_run(&rp_delete_window_hook);
+}
+
+/*
+ * Check all withdrawn windows and unmanage those that have been withdrawn
+ * for more than 1 second. This attempts to handle the case where UnmapNotify
+ * events never arrive.
+ */
+void
+cleanup_withdrawn_windows(void)
+{
+	rp_window *cur, *next;
+	time_t now = time(NULL);
+
+	list_for_each_entry_safe(cur, next, &rp_unmapped_window, node) {
+		if (cur->state != WithdrawnState)
+			continue;
+
+		/* Check if window has been withdrawn for more than 1 second */
+		time_t withdrawn_duration = now - cur->withdrawn_at;
+		if (withdrawn_duration > 1) {
+			PRINT_DEBUG(("Cleaning up stale withdrawn window '%s' (withdrawn for %ld seconds)\n",
+			    window_name(cur), (long)withdrawn_duration));
+			unmanage(cur);
+		}
+	}
+}
+
+/* Compact window numbers to eliminate gaps left by cleaned up windows */
+void
+compact_window_numbers(void)
+{
+	rp_vscreen *v = rp_current_vscreen;
+	rp_window_elem *cur;
+	int next_num = 0;
+	int needs_compacting = 0;
+
+	/* First pass: check if compacting is needed */
+	list_for_each_entry(cur, &v->mapped_windows, node) {
+		if (cur->number != next_num) {
+			needs_compacting = 1;
+			break;
+		}
+		next_num++;
+	}
+
+	/* Only renumber if gaps exist */
+	if (!needs_compacting)
+		return;
+
+	/* Second pass: renumber windows sequentially */
+	next_num = 0;
+	list_for_each_entry(cur, &v->mapped_windows, node) {
+		if (cur->number != next_num) {
+			/* Release the old number */
+			numset_release(v->numset, cur->number);
+
+			/* Assign the new sequential number */
+			cur->number = next_num;
+			numset_add_num(v->numset, next_num);
+
+			/* Note: We don't call vscreen_resort_window here because
+			 * we're iterating through the mapped_windows list which
+			 * is already sorted. The number change doesn't affect
+			 * the sort order since we're assigning sequential numbers
+			 * in iteration order. */
+		}
+		next_num++;
+	}
+
+	/* Update the window list display */
+	if (v->screen)
+		update_window_names(v->screen, defaults.window_fmt);
 }
 
 /* Hide all other mapped windows except for win in win's frame. */
