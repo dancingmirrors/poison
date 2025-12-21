@@ -710,7 +710,8 @@ vscreen_prev_window(rp_vscreen *v, rp_window *win)
 		    (!f || (cur->win->sticky_frame != f->number)))
 			continue;
 
-		if (!find_windows_frame(cur->win) && rp_have_xrandr)
+		if (!find_windows_frame(cur->win) &&
+		    (cur->win->vscreen == win->vscreen || rp_have_xrandr))
 			return cur->win;
 	}
 

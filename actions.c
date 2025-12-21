@@ -3005,14 +3005,22 @@ cmd_windowselector(int interactive, struct cmdarg **args)
 	s = rp_current_screen;
 	cur_win = current_window();
 
-	/* If no windows or only one window, just run normal windows command */
-	if (list_size(&rp_current_vscreen->mapped_windows) <= 1)
+	/* If no windows, just run normal windows command */
+	if (list_size(&rp_current_vscreen->mapped_windows) == 0)
 		return cmd_windows(interactive, args);
 
-	/* Start with the next window selected */
-	selected_win = vscreen_next_window(rp_current_vscreen, cur_win);
-	if (!selected_win)
-		selected_win = vscreen_last_window(rp_current_vscreen);
+	/* If only one window, show it but still allow interactive escape */
+	if (list_size(&rp_current_vscreen->mapped_windows) == 1) {
+		selected_win = cur_win;
+		if (!selected_win)
+			selected_win = vscreen_last_window(rp_current_vscreen);
+	} else {
+		/* Start with the next window selected */
+		selected_win = vscreen_next_window(rp_current_vscreen, cur_win);
+		if (!selected_win)
+			selected_win = vscreen_last_window(rp_current_vscreen);
+	}
+
 	if (!selected_win)
 		return cmdret_new(RET_FAILURE, "%s", MESSAGE_NO_OTHER_WINDOW);
 
@@ -3071,19 +3079,8 @@ cmd_windowselector(int interactive, struct cmdarg **args)
 		case XK_KP_Enter:
 			/* Enter - select the highlighted window */
 			if (selected_win) {
-				/* Verify the window still exists before switching */
-				rp_window_elem *elem = vscreen_find_window(&rp_current_vscreen->mapped_windows, selected_win);
-				if (elem) {
-					set_active_window(selected_win);
-					done = 1;
-				} else {
-					/* Window no longer exists, refresh the list and select a valid window */
-					selected_win = vscreen_last_window(rp_current_vscreen);
-					if (selected_win)
-						show_window_list_with_selection(s, fmt, selected_win);
-					else
-						done = 1;	/* No windows left, exit */
-				}
+				set_active_window(selected_win);
+				done = 1;
 			}
 			break;
 
