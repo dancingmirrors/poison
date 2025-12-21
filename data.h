@@ -111,6 +111,9 @@ struct rp_window {
 	/* Does this window accept input focus (from WM_HINTS)? */
 	int accepts_input;
 
+	/* Does this window support WM_TAKE_FOCUS protocol? */
+	int supports_wm_take_focus;
+
 	/* Timestamp when window was withdrawn (for cleanup of lingering windows) */
 	time_t withdrawn_at;
 

@@ -44,6 +44,7 @@ Atom get_net_wm_window_type(rp_window *win);
 int is_unmanaged_window_type(Window win);
 void update_window_information(rp_window *win);
 void update_window_input_hint(rp_window *win);
+void update_window_protocols(rp_window *win);
 void cleanup_withdrawn_windows(void);
 void cleanup_phantom_windows(void);
 void compact_window_numbers(void);

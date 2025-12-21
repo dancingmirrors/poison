@@ -252,9 +252,15 @@ map_request(Window window)
 
 		/* Update input hint in case it changed since last check */
 		update_window_input_hint(win);
+		update_window_protocols(win);
 
-		/* Depending on the rudeness level, actually map the window. */
-		if (!win->accepts_input) {
+		/*
+		 * Depending on the rudeness level, actually map the window.
+		 * Windows that accept input OR support WM_TAKE_FOCUS (Globally
+		 * Active model) should be allowed to map. Only block windows
+		 * with No Input model (no input hint and no WM_TAKE_FOCUS).
+		 */
+		if (!win->accepts_input && !win->supports_wm_take_focus) {
 			/* Windows that don't accept input are blocked from mapping */
 			show_rudeness_msg(win, win->last_access == 0 ? 0 : 1);
 		} else if (win->last_access == 0) {
@@ -636,6 +642,9 @@ property_notify(XEvent *ev)
 	} else if (ev->xproperty.atom == XA_WM_HINTS) {
 		PRINT_DEBUG(("updating WM_HINTS (InputHint)\n"));
 		update_window_input_hint(win);
+	} else if (ev->xproperty.atom == wm_protocols) {
+		PRINT_DEBUG(("updating WM_PROTOCOLS\n"));
+		update_window_protocols(win);
 	} else if (ev->xproperty.atom == XA_WM_TRANSIENT_FOR) {
 		PRINT_DEBUG(("Transient for\n"));
 		win->transient = XGetTransientForHint(dpy, win->w,

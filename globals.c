@@ -285,21 +285,45 @@ struct rp_hook_db_entry rp_hook_db[] =
 void
 set_rp_window_focus(rp_window *win)
 {
-	PRINT_DEBUG(("Giving focus to '%s' (accepts_input: %d)\n",
-	    window_name(win), win->accepts_input));
+	XEvent ev;
+
+	PRINT_DEBUG(("Giving focus to '%s' (accepts_input: %d, supports_wm_take_focus: %d)\n",
+	    window_name(win), win->accepts_input, win->supports_wm_take_focus));
 
 	/*
-	 * Only set input focus if the window accepts it. Some windows
-	 * explicitly say they don't accept input.
+	 * Update both input hint and protocols in case they changed since the
+	 * last check.
 	 */
 	update_window_input_hint(win);
+	update_window_protocols(win);
 
-	if (win->accepts_input) {
+	/*
+	 * Set input focus according to the ICCCM input model:
+	 * - Passive/Locally Active: InputHint=True -> set focus
+	 * - Globally Active: InputHint=False + WM_TAKE_FOCUS -> set focus anyway
+	 * - No Input: InputHint=False, no WM_TAKE_FOCUS -> don't set focus
+	 */
+	if (win->accepts_input || win->supports_wm_take_focus) {
 		XSetInputFocus(dpy, win->w,
 		    RevertToPointerRoot, CurrentTime);
 		/* Force sync to ensure focus change takes effect */
 		XSync(dpy, False);
 	}
+
+	/* Send WM_TAKE_FOCUS message if the window supports it. */
+	if (win->supports_wm_take_focus) {
+		ev.xclient.type = ClientMessage;
+		ev.xclient.window = win->w;
+		ev.xclient.message_type = wm_protocols;
+		ev.xclient.format = 32;
+		ev.xclient.data.l[0] = wm_take_focus;
+		ev.xclient.data.l[1] = CurrentTime;
+
+		XSendEvent(dpy, win->w, False, 0, &ev);
+		XSync(dpy, False);
+		PRINT_DEBUG(("Sent WM_TAKE_FOCUS to '%s'\n", window_name(win)));
+	}
+
 	set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
 	    &win->w, 1);
 }

@@ -196,6 +196,7 @@ add_to_window_list(rp_screen *s, Window w)
 	new_window->full_screen = 0;
 	new_window->floated = 0;
 	new_window->accepts_input = 1;  /* Default to accepting input */
+	new_window->supports_wm_take_focus = 0;  /* Will be set during update */
 	new_window->withdrawn_at = 0;  /* Will be set when window is withdrawn */
 
 	update_window_gravity(new_window);

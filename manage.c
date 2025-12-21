@@ -480,6 +480,9 @@ update_window_information(rp_window *win)
 		XFree(wm_hints);
 	}
 
+	/* Check if window supports WM_TAKE_FOCUS protocol */
+	update_window_protocols(win);
+
 	/* Get the colormap */
 	XGetWindowAttributes(dpy, win->w, &attr);
 	win->colormap = attr.colormap;
@@ -519,6 +522,31 @@ update_window_input_hint(rp_window *win)
 			    window_name(win), win->accepts_input));
 		}
 		XFree(wm_hints);
+	}
+}
+
+/*
+ * Update the WM_PROTOCOLS support. Check if the window supports WM_TAKE_FOCUS.
+ */
+void
+update_window_protocols(rp_window *win)
+{
+	Atom *protocols;
+	int n;
+	int i;
+
+	win->supports_wm_take_focus = 0;
+
+	if (XGetWMProtocols(dpy, win->w, &protocols, &n)) {
+		for (i = 0; i < n; i++) {
+			if (protocols[i] == wm_take_focus) {
+				win->supports_wm_take_focus = 1;
+				PRINT_DEBUG(("Window '%s' supports WM_TAKE_FOCUS\n",
+				    window_name(win)));
+				break;
+			}
+		}
+		XFree(protocols);
 	}
 }
 
