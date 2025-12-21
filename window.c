@@ -420,8 +420,6 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	rp_current_screen = win->vscreen->screen;
 	rp_current_screen->current_vscreen = win->vscreen;
 
-	/* Refresh InputHint in case it changed since window was mapped */
-	update_window_input_hint(win);
 	set_rp_window_focus(win);
 
 	/*
@@ -437,6 +435,9 @@ give_window_focus(rp_window *win, rp_window *last_win)
 
 	/* Clean up any stale withdrawn windows on focus change */
 	cleanup_withdrawn_windows();
+
+	/* Clean up phantom mapped windows that no longer exist */
+	cleanup_phantom_windows();
 
 	/* Compact window numbers to eliminate gaps */
 	compact_window_numbers();

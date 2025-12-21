@@ -292,9 +292,13 @@ set_rp_window_focus(rp_window *win)
 	 * Only set input focus if the window accepts it. Some windows
 	 * explicitly say they don't accept input.
 	 */
+	update_window_input_hint(win);
+
 	if (win->accepts_input) {
 		XSetInputFocus(dpy, win->w,
 		    RevertToPointerRoot, CurrentTime);
+		/* Force sync to ensure focus change takes effect */
+		XSync(dpy, False);
 	}
 	set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
 	    &win->w, 1);

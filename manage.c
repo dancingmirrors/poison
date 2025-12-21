@@ -1005,6 +1005,9 @@ map_window(rp_window *win)
 	append_atom(rp_glob_screen.root, _net_client_list_stacking, XA_WINDOW,
 	    &win->w, 1);
 
+	/* Sync to ensure window is properly mapped before continuing */
+	XSync(dpy, False);
+
 	hook_run(&rp_new_window_hook);
 }
 
@@ -1123,6 +1126,54 @@ cleanup_withdrawn_windows(void)
 	}
 }
 
+/*
+ * Check all mapped windows and withdraw phantom windows - windows that
+ * are in the window list but their X11 window no longer exists or is
+ * not viewable.
+ */
+void
+cleanup_phantom_windows(void)
+{
+	rp_window *cur, *next;
+	XWindowAttributes attr;
+
+	list_for_each_entry_safe(cur, next, &rp_mapped_window, node) {
+		/*
+		 * Skip windows that are currently displayed to avoid disrupting
+		 * active work. This includes the current focused window and any
+		 * window that is shown in a frame.
+		 */
+		if (cur == current_window() || find_windows_frame(cur))
+			continue;
+
+		/* Check if the window still exists */
+		ignore_badwindow++;
+		int exists = XGetWindowAttributes(dpy, cur->w, &attr);
+		ignore_badwindow--;
+
+		if (!exists) {
+			PRINT_DEBUG(("Phantom window detected: '%s' no longer exists, withdrawing\n",
+			    window_name(cur)));
+			withdraw_window(cur);
+			continue;
+		}
+
+		/*
+		 * Check if window is in an abnormal state. IsViewable means the window
+		 * is mapped and all ancestors are mapped. IsUnmapped is normal for
+		 * windows that are temporarily hidden. IsUnviewable means the window
+		 * is mapped but an ancestor is unmapped - this is abnormal for our
+		 * tracked windows.
+		 */
+		if (attr.map_state == IsUnviewable) {
+			PRINT_DEBUG(("Phantom window detected: '%s' is unviewable (ancestor unmapped), withdrawing\n",
+			    window_name(cur)));
+			withdraw_window(cur);
+			continue;
+		}
+	}
+}
+
 /* Compact window numbers to eliminate gaps left by cleaned up windows */
 void
 compact_window_numbers(void)
@@ -1145,9 +1196,21 @@ compact_window_numbers(void)
 	if (!needs_compacting)
 		return;
 
-	/* Second pass: renumber windows sequentially */
+	/* Second pass: renumber windows sequentially, skipping invalid ones */
 	next_num = 0;
 	list_for_each_entry(cur, &v->mapped_windows, node) {
+		/* Validate window exists before renumbering */
+		XWindowAttributes attr;
+		ignore_badwindow++;
+		int exists = XGetWindowAttributes(dpy, cur->win->w, &attr);
+		ignore_badwindow--;
+
+		if (!exists) {
+			PRINT_DEBUG(("Window in mapped_windows no longer exists during compact, skipping\n"));
+			/* Skip this window - it will be cleaned up by cleanup_phantom_windows */
+			continue;
+		}
+
 		if (cur->number != next_num) {
 			/* Release the old number */
 			numset_release(v->numset, cur->number);

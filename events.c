@@ -250,6 +250,9 @@ map_request(Window window)
 			PRINT_DEBUG(("honouring raise from other vscreen\n"));
 		}
 
+		/* Update input hint in case it changed since last check */
+		update_window_input_hint(win);
+
 		/* Depending on the rudeness level, actually map the window. */
 		if (!win->accepts_input) {
 			/* Windows that don't accept input are blocked from mapping */
