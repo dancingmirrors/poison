@@ -173,15 +173,15 @@ init_defaults(void)
 	defaults.maxsize_gravity = CenterGravity;
 
 	defaults.input_window_size = 200;
-	defaults.window_border_width = 1;
+	defaults.window_border_width = 0;
 	defaults.only_border = 1;
-	defaults.bar_x_padding = 14;
-	defaults.bar_y_padding = 10;
+	defaults.bar_x_padding = 3;
+	defaults.bar_y_padding = 3;
 	defaults.bar_location = NorthWestGravity;
 	defaults.bar_timeout = 3;
 	defaults.bar_border_width = 0;
 	defaults.bar_in_padding = 1;
-	defaults.bar_sticky = 1;
+	defaults.bar_sticky = 0;
 
 	defaults.frame_indicator_timeout = 1;
 	defaults.frame_resize_unit = 10;
@@ -195,8 +195,8 @@ init_defaults(void)
 
 	defaults.font_string = xstrdup(DEFAULT_XFT_FONT);
 
-	defaults.fgcolor_string = xstrdup("#eeeeee");
-	defaults.bgcolor_string = xstrdup("black");
+	defaults.fgcolor_string = xstrdup("black");
+	defaults.bgcolor_string = xstrdup("white");
 	defaults.fwcolor_string = xstrdup("black");
 	defaults.bwcolor_string = xstrdup("black");
 	defaults.barbordercolor_string = xstrdup("#eeeeee");
@@ -209,12 +209,12 @@ init_defaults(void)
 	defaults.sticky_fmt = xstrdup("%t");
 	defaults.resize_fmt = xstrdup("Resize frame (%Wx%H)");
 
-	defaults.win_name = WIN_NAME_TITLE;
+	defaults.win_name = WIN_NAME_RES_NAME;
 	defaults.startup_message = 1;
 	defaults.warp = 0;
 	defaults.window_list_style = STYLE_COLUMN;
 
-	defaults.history_size = 20;
+	defaults.history_size = 0;
 	defaults.frame_selectors = xstrdup("");
 	defaults.maxundos = 20;
 

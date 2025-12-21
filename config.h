@@ -25,9 +25,9 @@
 
 #define PROGNAME	"sdorfehs"
 
-/* Enter command mode with Control+a by default. */
-#define KEY_PREFIX      XK_a
-#define MODIFIER_PREFIX RP_CONTROL_MASK
+/* Use Super_L as escape key by default. */
+#define KEY_PREFIX      XK_Super_L
+#define MODIFIER_PREFIX 0
 
 /* Terminal executed by default. */
 #define TERM_PROG	"xterm"
