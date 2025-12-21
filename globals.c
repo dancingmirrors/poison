@@ -90,6 +90,8 @@ rp_global_screen rp_glob_screen;
 Display *dpy;
 
 int rp_have_xrandr;
+int rp_have_shape = 0;
+int rp_shape_event_base = 0;
 
 LIST_HEAD(rp_children);
 struct rp_defaults defaults;
@@ -323,6 +325,10 @@ set_rp_window_focus(rp_window *win)
 		XSync(dpy, False);
 		PRINT_DEBUG(("Sent WM_TAKE_FOCUS to '%s'\n", window_name(win)));
 	}
+
+	/* Allow events to ensure passive grabs work properly. */
+	XAllowEvents(dpy, AsyncBoth, CurrentTime);
+	XSync(dpy, False);
 
 	set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
 	    &win->w, 1);

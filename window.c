@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <X11/extensions/shape.h>
+
 #include "sdorfehs.h"
 
 LIST_HEAD(rp_unmapped_window);
@@ -205,6 +207,10 @@ add_to_window_list(rp_screen *s, Window w)
 	    &new_window->mouse_y);
 
 	XSelectInput(dpy, new_window->w, WIN_EVENTS);
+
+	/* Select for shape events if the Shape extension is available */
+	if (rp_have_shape)
+		XShapeSelectInput(dpy, new_window->w, ShapeNotifyMask);
 
 	new_window->user_name = xstrdup("Unnamed");
 

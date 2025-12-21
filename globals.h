@@ -61,6 +61,10 @@
 /* Whether or not we support xrandr */
 extern int rp_have_xrandr;
 
+/* Whether or not we support shape extension */
+extern int rp_have_shape;
+extern int rp_shape_event_base;
+
 /*
  * Each child process is stored in this list. spawn, creates a new entry in
  * this list, the SIGCHLD handler sets child.terminated to be true and

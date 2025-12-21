@@ -22,6 +22,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xproto.h>
 #include <X11/cursorfont.h>
+#include <X11/extensions/shape.h>
 #include <sys/stat.h>
 
 #include <err.h>
@@ -229,6 +230,19 @@ init_defaults(void)
 	defaults.win_add_cur_vscreen = 0;
 }
 
+static void
+init_shape(void)
+{
+	int shape_error_base;
+
+	rp_have_shape = XShapeQueryExtension(dpy, &rp_shape_event_base,
+	    &shape_error_base);
+	if (rp_have_shape) {
+		PRINT_DEBUG(("Shape extension detected (event base: %d)\n",
+		    rp_shape_event_base));
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -367,6 +381,7 @@ main(int argc, char *argv[])
 	init_defaults();
 	init_window_stuff();
 	init_xrandr();
+	init_shape();
 	init_screens();
 
 	update_modifier_map();

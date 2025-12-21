@@ -36,6 +36,7 @@
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/Xmd.h>	/* for CARD32. */
+#include <X11/extensions/shape.h>
 
 #include "sdorfehs.h"
 
@@ -651,6 +652,16 @@ property_notify(XEvent *ev)
 		    &win->transient_for);
 	} else if (ev->xproperty.atom == _net_wm_state) {
 		check_state(win);
+	} else if (ev->xproperty.atom == _net_wm_window_type) {
+		/*
+		 * Window type changed (e.g., splash screen transitioning to normal window).
+		 * Check if this window should now be unmanaged or managed.
+		 */
+		PRINT_DEBUG(("_NET_WM_WINDOW_TYPE changed\n"));
+		if (is_unmanaged_window_type(win->w)) {
+			PRINT_DEBUG(("Window type changed to unmanaged type, unmanaging\n"));
+			unmanage(win);
+		}
 	} else {
 		PRINT_DEBUG(("Unhandled property notify event: %ld\n",
 		    ev->xproperty.atom));
@@ -806,6 +817,21 @@ delegate_event(XEvent *ev)
 {
 	if (rp_have_xrandr)
 		xrandr_notify(ev);
+
+	/* Handle Shape extension events */
+	if (rp_have_shape && ev->type == rp_shape_event_base + ShapeNotify) {
+		PRINT_DEBUG(("--- Handling ShapeNotify ---\n"));
+		/*
+		 * Shape events indicate the window's shape has changed.
+		 * We just need to acknowledge this happened - compositors
+		 * will be notified automatically by the X server.
+		 */
+#ifdef DEBUG
+		XShapeEvent *sev = (XShapeEvent *)ev;
+		PRINT_DEBUG(("ShapeNotify for window 0x%lx\n", sev->window));
+#endif
+		return;
+	}
 
 	switch (ev->type) {
 	case ConfigureRequest:
