@@ -3079,8 +3079,19 @@ cmd_windowselector(int interactive, struct cmdarg **args)
 		case XK_KP_Enter:
 			/* Enter - select the highlighted window */
 			if (selected_win) {
-				set_active_window(selected_win);
-				done = 1;
+				/* Verify the window still exists before switching */
+				rp_window_elem *elem = vscreen_find_window(&rp_current_vscreen->mapped_windows, selected_win);
+				if (elem) {
+					set_active_window(selected_win);
+					done = 1;
+				} else {
+					/* Window no longer exists, refresh the list and select a valid window */
+					selected_win = vscreen_last_window(rp_current_vscreen);
+					if (selected_win)
+						show_window_list_with_selection(s, fmt, selected_win);
+					else
+						done = 1;	/* No windows left, exit */
+				}
 			}
 			break;
 
