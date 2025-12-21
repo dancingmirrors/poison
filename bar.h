@@ -20,6 +20,16 @@
 #ifndef _SDORFEHS_BAR_H
 #define _SDORFEHS_BAR_H 1
 
+/* Possible values for bar_is_raised status. */
+#define BAR_IS_HIDDEN		0
+#define BAR_IS_WINDOW_LIST	1
+#define BAR_IS_VSCREEN_LIST	2
+#define BAR_IS_MESSAGE		3
+#define BAR_IS_STICKY		4
+
+#define BAR_IS_RAISED(s)	(s->bar_is_raised != BAR_IS_HIDDEN && \
+				s->bar_is_raised != BAR_IS_STICKY)
+
 int bar_mkfifo(void);
 void init_bar(void);
 void bar_reset_alarm(void);

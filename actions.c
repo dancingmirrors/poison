@@ -276,6 +276,7 @@ static cmdret *cmd_vrename(int interactive, struct cmdarg **args);
 static cmdret *cmd_vscreens(int interactive, struct cmdarg **args);
 static cmdret *cmd_vselect(int interactive, struct cmdarg **args);
 static cmdret *cmd_windows(int interactive, struct cmdarg **args);
+static cmdret *cmd_windowselector(int interactive, struct cmdarg **args);
 
 static void
 add_set_var(char *name, cmdret *(*fn)(struct cmdarg **), int nargs, ...)
@@ -588,6 +589,7 @@ init_user_commands(void)
                     "Split: ", arg_STRING);
 	add_command("windows",		cmd_windows,	1, 0, 0,
                     "", arg_REST);
+	add_command("windowselector",	cmd_windowselector, 0, 0, 0);
 	/* @end (tag required for genrpbindings) */
 
 	init_set_vars();
@@ -898,7 +900,7 @@ initialize_default_keybindings(void)
 	add_keybinding(XK_Escape, RP_SUPER_MASK, "delete", map);
 	add_keybinding(XK_Left, RP_SUPER_MASK, "focusleft", map);
 	add_keybinding(XK_Right, RP_SUPER_MASK, "focusright", map);
-	add_keybinding(XK_Tab, RP_SUPER_MASK, "next", map);
+	add_keybinding(XK_Tab, RP_SUPER_MASK, "windowselector", map);
 	add_keybinding(XK_Up, RP_SUPER_MASK, "focusup", map);
 	add_keybinding(XK_colon, RP_SUPER_MASK, "colon", map);
 	add_keybinding(XK_h, RP_SUPER_MASK, "hsplit", map);
@@ -2916,6 +2918,203 @@ cmd_windows(int interactive, struct cmdarg **args)
 		sbuf_free(window_list);
 	}
 	return ret;
+}
+
+/* Helper function to display window list with a specific window highlighted */
+static void
+show_window_list_with_selection(rp_screen *s, char *fmt, rp_window *selected_win)
+{
+	struct sbuf *bar_buffer;
+	int mark_start = 0;
+	int mark_end = 0;
+	char *delimiter;
+	rp_window_elem *we;
+
+	bar_buffer = sbuf_new(0);
+	delimiter = (defaults.window_list_style == STYLE_ROW) ? " " : "\n";
+
+	/* Build window list with selected_win highlighted */
+	list_for_each_entry(we, &rp_current_vscreen->mapped_windows, node) {
+		if (we->win == selected_win)
+			mark_start = strlen(sbuf_get(bar_buffer));
+
+		if (!delimiter)
+			sbuf_concat(bar_buffer, " ");
+
+		format_string(fmt, we, bar_buffer);
+
+		if (!delimiter)
+			sbuf_concat(bar_buffer, " ");
+
+		if (delimiter && we->node.next != &rp_current_vscreen->mapped_windows)
+			sbuf_concat(bar_buffer, delimiter);
+
+		if (we->win == selected_win)
+			mark_end = strlen(sbuf_get(bar_buffer));
+	}
+
+	if (!strcmp(sbuf_get(bar_buffer), ""))
+		sbuf_copy(bar_buffer, MESSAGE_NO_MANAGED_WINDOWS);
+
+	marked_message(sbuf_get(bar_buffer), mark_start, mark_end,
+	    BAR_IS_WINDOW_LIST);
+
+	sbuf_free(bar_buffer);
+}
+
+/* Helper to get next valid window, with fallback if needed */
+static rp_window *
+get_next_valid_window(rp_window *current)
+{
+	rp_window *next = vscreen_next_window(rp_current_vscreen, current);
+	if (!next)
+		next = vscreen_last_window(rp_current_vscreen);
+	return next;
+}
+
+/* Helper to get previous valid window, with fallback if needed */
+static rp_window *
+get_prev_valid_window(rp_window *current)
+{
+	rp_window *prev = vscreen_prev_window(rp_current_vscreen, current);
+	if (!prev)
+		prev = vscreen_last_window(rp_current_vscreen);
+	return prev;
+}
+
+/*
+ * Interactive window selector - like Alt-Tab in other window managers.
+ * Shows the window list and allows cycling through windows with Tab/arrows.
+ */
+cmdret *
+cmd_windowselector(int interactive, struct cmdarg **args)
+{
+	rp_screen *s;
+	rp_window *cur_win, *selected_win;
+	KeySym ch;
+	unsigned int modifier;
+	char keysym_buf[513];
+	char *fmt;
+	int done = 0;
+	Window focus;
+	int revert;
+
+	if (!interactive)
+		return cmd_windows(interactive, args);
+
+	s = rp_current_screen;
+	cur_win = current_window();
+
+	/* If no windows or only one window, just run normal windows command */
+	if (list_size(&rp_current_vscreen->mapped_windows) <= 1)
+		return cmd_windows(interactive, args);
+
+	/* Start with the next window selected */
+	selected_win = vscreen_next_window(rp_current_vscreen, cur_win);
+	if (!selected_win)
+		selected_win = vscreen_last_window(rp_current_vscreen);
+	if (!selected_win)
+		return cmdret_new(RET_FAILURE, "%s", MESSAGE_NO_OTHER_WINDOW);
+
+	fmt = defaults.window_fmt;
+
+	/* Show bar and initial selection */
+	s->bar_is_raised = BAR_IS_WINDOW_LIST;
+	XMapRaised(dpy, s->bar_window);
+	show_window_list_with_selection(s, fmt, selected_win);
+
+	/* Get current focus and set focus to key_window for reading input */
+	XGetInputFocus(dpy, &focus, &revert);
+	set_window_focus(s->key_window);
+	XSync(dpy, False);
+
+	/* Interactive selection loop */
+	while (!done) {
+		read_key(&ch, &modifier, keysym_buf, sizeof(keysym_buf));
+		modifier = x11_mask_to_rp_mask(modifier);
+
+		switch (ch) {
+		case XK_Tab:
+			/* Tab (or Shift-Tab for prev) - cycle through windows */
+			if (modifier & RP_SHIFT_MASK)
+				selected_win = get_prev_valid_window(selected_win);
+			else
+				selected_win = get_next_valid_window(selected_win);
+
+			if (selected_win)
+				show_window_list_with_selection(s, fmt, selected_win);
+			else
+				done = 1;	/* No windows left */
+			break;
+
+		case XK_Down:
+		case XK_Right:
+			/* Arrow keys - next window */
+			selected_win = get_next_valid_window(selected_win);
+			if (selected_win)
+				show_window_list_with_selection(s, fmt, selected_win);
+			else
+				done = 1;	/* No windows left */
+			break;
+
+		case XK_Up:
+		case XK_Left:
+			/* Arrow keys - previous window */
+			selected_win = get_prev_valid_window(selected_win);
+			if (selected_win)
+				show_window_list_with_selection(s, fmt, selected_win);
+			else
+				done = 1;	/* No windows left */
+			break;
+
+		case XK_Return:
+		case XK_KP_Enter:
+			/* Enter - select the highlighted window */
+			if (selected_win) {
+				/* Verify the window still exists before switching */
+				rp_window_elem *elem = vscreen_find_window(&rp_current_vscreen->mapped_windows, selected_win);
+				if (elem) {
+					set_active_window(selected_win);
+					done = 1;
+				} else {
+					/* Window no longer exists, refresh the list and select a valid window */
+					selected_win = vscreen_last_window(rp_current_vscreen);
+					if (selected_win)
+						show_window_list_with_selection(s, fmt, selected_win);
+					else
+						done = 1;	/* No windows left, exit */
+				}
+			}
+			break;
+
+		case XK_Escape:
+		case XK_g:	/* Emacs-style abort */
+			/* Escape - cancel and return to original window */
+			done = 1;
+			break;
+
+		default:
+			/* Number keys - select window by number */
+			if (ch >= XK_0 && ch <= XK_9) {
+				int win_num = (ch - XK_0);
+				rp_window_elem *elem = vscreen_find_window_by_number(
+				    rp_current_vscreen, win_num);
+				if (elem) {
+					selected_win = elem->win;
+					show_window_list_with_selection(s, fmt, selected_win);
+				}
+			}
+			break;
+		}
+	}
+
+	/* Restore focus */
+	set_window_focus(focus);
+
+	/* Hide the bar after selection */
+	hide_bar(s, 0);
+
+	return cmdret_new(RET_SUCCESS, NULL);
 }
 
 cmdret *

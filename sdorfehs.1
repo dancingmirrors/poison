@@ -122,6 +122,8 @@ Execute a
 command
 .It Ic C\-a F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12
 Switch to vscreen number 0 | 1 | 2 | ...
+.It Ic Super-Tab
+Interactive window selector (cycle through windows)
 .El
 .Pp
 Further default key bindings can be found in parentheses after the
@@ -902,6 +904,32 @@ In non\-interactive mode, output the list of windows in the current vscreen
 line by line.
 The format string can be overwritten by the optional parameter
 .Ar format .
+.It Ic windowselector
+Interactive window selector, similar to Alt-Tab in other window managers.
+Shows the list of all windows in the current vscreen with the next window
+initially highlighted, and allows interactive selection using the following keys:
+.Bl -tag -offset 2n -width 2n -compact
+.It Ic Tab
+Move selection to next window
+.It Ic Shift-Tab
+Move selection to previous window
+.It Ic Down | Right
+Move selection to next window
+.It Ic Up | Left
+Move selection to previous window
+.It Ic 0-9
+Jump to window number 0-9
+.It Ic Enter
+Switch to the selected window
+.It Ic Escape | g
+Cancel and return to the original window
+.El
+.Pp
+This command is bound to
+.Ic Super-Tab
+by default, replacing the non-interactive
+.Ic next
+command.
 .El
 .Sh VARIABLES
 .Nm
