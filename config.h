@@ -91,6 +91,6 @@
 #define TOP_KEYMAP "top"
 
 /* The default font */
-#define DEFAULT_XFT_FONT "monospace:size=12"
+#define DEFAULT_XFT_FONT "PxPlus IBM VGA8:antialias=true:hintstyle=hintfull:size=12"
 
 #endif                          /* !_ _POISON_CONF_H */

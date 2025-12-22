@@ -23,6 +23,7 @@ CFLAGS+=	-g -DDEBUG=1
 #CFLAGS+=	-DSENDCMD_DEBUG=1
 
 BINDIR=		${DESTDIR}$(PREFIX)/bin
+FONTDIR=	${DESTDIR}$(PREFIX)/share/fonts/poison
 
 SRC!=		ls *.c | grep -v commoner.c
 OBJ=		${SRC:.c=.o}
@@ -44,6 +45,10 @@ install: all
 	mkdir -p $(BINDIR)
 	install -s poison $(BINDIR)
 	install -s commoner $(BINDIR)
+	mkdir -p $(FONTDIR)
+	install -m 644 PxPlus_IBM_VGA8.ttf $(FONTDIR)
+	install -m 644 COPYING.font $(FONTDIR)
+	fc-cache -f
 
 regress:
 	scan-build $(MAKE)
