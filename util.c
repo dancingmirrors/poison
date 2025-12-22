@@ -20,6 +20,7 @@
 
 #include <ctype.h>
 #include <err.h>
+#include <unistd.h>
 
 __dead void
 fatal(const char *msg)
@@ -153,4 +154,34 @@ strtok_ws(char *s)
 		last++;
 	}
 	return nonws;
+}
+
+/*
+ * Start the commoner compositor as a daemonized background process.
+ * Uses --daemonize so it forks into the background and --unredir-if-possible
+ * for better performance with fullscreen windows.
+ * If the compositor is already running, the new instance will detect this
+ * and exit gracefully, making this safe to call on WM restart.
+ */
+void
+start_compositor(void)
+{
+	int pid;
+
+	PRINT_DEBUG(("Starting commoner compositor\n"));
+
+	pid = fork();
+	if (pid == 0) {
+		/* Child process - use execlp to search PATH */
+		execlp("commoner", "commoner",
+		    "--daemonize", "--unredir-if-possible", (char *)NULL);
+		/* If execlp fails, try current directory */
+		execl("./commoner", "commoner",
+		    "--daemonize", "--unredir-if-possible", (char *)NULL);
+		/* If that also fails, exit */
+		_exit(1);
+	} else if (pid < 0) {
+		warnx("Failed to fork for compositor");
+	}
+	/* Parent continues */
 }

@@ -1,0 +1,6 @@
+-kr
+-i4
+-nut
+-sob
+-nbad
+-nbap

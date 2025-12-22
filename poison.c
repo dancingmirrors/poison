@@ -345,6 +345,9 @@ main(int argc, char *argv[])
 	initialize_default_keybindings();
 	init_bar();
 
+	/* Start the integrated commoner compositor */
+	start_compositor();
+
 	scanwins();
 
 	c = read_startup_files(alt_rcfile);

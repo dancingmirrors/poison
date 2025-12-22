@@ -965,6 +965,8 @@ handle_signals(void)
 	if (hup_signalled > 0) {
 		PRINT_DEBUG(("restarting\n"));
 		hook_run(&rp_restart_hook);
+		/* Restart compositor - it will detect if already running and exit */
+		start_compositor();
 		clean_up();
 		execvp(myargv[0], myargv);
 	}
