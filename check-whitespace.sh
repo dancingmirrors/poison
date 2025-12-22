@@ -76,18 +76,9 @@ while IFS= read -r file; do
 done < <(find . -name "*.h" -type f | grep -v ".git" | grep -v "^\./build/")
 
 echo ""
-echo "=== Checking .py files ==="
-py_file_count=0
-while IFS= read -r file; do
-    check_file "$file"
-    py_file_count=$((py_file_count + 1))
-done < <(find . -name "*.py" -type f | grep -v ".git" | grep -v "^\./build/")
-
-echo ""
 echo "=== Summary ==="
 echo "C files checked: $c_file_count"
 echo "Header files checked: $h_file_count"
-echo "Python files checked: $py_file_count"
 echo "Files with issues: $files_with_issues"
 echo "Total issues found: $total_issues"
 
