@@ -128,9 +128,9 @@ extern Atom _net_workarea;
 extern Atom _net_wm_name;
 extern Atom _net_wm_pid;
 extern Atom _net_wm_state;
-#define _NET_WM_STATE_REMOVE	0    /* remove/unset property */
-#define _NET_WM_STATE_ADD	1    /* add/set property */
-#define _NET_WM_STATE_TOGGLE	2    /* toggle property  */
+#define _NET_WM_STATE_REMOVE	0       /* remove/unset property */
+#define _NET_WM_STATE_ADD	1       /* add/set property */
+#define _NET_WM_STATE_TOGGLE	2       /* toggle property  */
 extern Atom _net_wm_state_fullscreen;
 extern Atom _net_wm_window_type;
 extern Atom _net_wm_window_type_dialog;
@@ -201,28 +201,29 @@ char *get_selection(void);
 
 /* Wrapper font functions to support Xft */
 
-XftFont *rp_get_font(rp_screen *s, char *font);
-void rp_clear_cached_fonts(rp_screen *s);
-void rp_draw_string(rp_screen *s, Drawable d, int style, int x, int y,
-    char *string, int length, char *font, char *color);
-int rp_text_width(rp_screen *s, char *string, int count, char *font);
+XftFont *rp_get_font(rp_screen * s, char *font);
+void rp_clear_cached_fonts(rp_screen * s);
+void rp_draw_string(rp_screen * s, Drawable d, int style, int x, int y,
+                    char *string, int length, char *font, char *color);
+int rp_text_width(rp_screen * s, char *string, int count, char *font);
 
 void check_child_procs(void);
 void chld_handler(int signum);
 void set_sig_handler(int sig, void (*action)(int));
 void set_close_on_exec(int fd);
-void read_rc_file(FILE *file);
+void read_rc_file(FILE * file);
 const char *get_homedir(void);
 char *get_config_dir(void);
 void clean_up(void);
 
-void register_atom(Atom *a, char *name);
+void register_atom(Atom * a, char *name);
 int set_atom(Window w, Atom a, Atom type, unsigned long *val,
-    unsigned long nitems);
+             unsigned long nitems);
 int append_atom(Window w, Atom a, Atom type, unsigned long *val,
-    unsigned long nitems);
+                unsigned long nitems);
 unsigned long get_atom(Window w, Atom a, Atom type, unsigned long off,
-    unsigned long *ret, unsigned long nitems, unsigned long *left);
+                       unsigned long *ret, unsigned long nitems,
+                       unsigned long *left);
 void remove_atom(Window w, Atom a, Atom type, unsigned long remove);
 
 #endif

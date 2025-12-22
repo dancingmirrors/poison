@@ -22,21 +22,22 @@
 #include "utf8.h"
 
 typedef enum edit_status {
-	EDIT_INSERT,
-	EDIT_DELETE,
-	EDIT_MOVE,
-	EDIT_COMPLETE,
-	EDIT_ABORT,
-	EDIT_DONE,
-	EDIT_NO_OP
+    EDIT_INSERT,
+    EDIT_DELETE,
+    EDIT_MOVE,
+    EDIT_COMPLETE,
+    EDIT_ABORT,
+    EDIT_DONE,
+    EDIT_NO_OP
 } edit_status;
 
 /* Input line functions */
 rp_input_line *input_line_new(char *prompt, char *preinput,
-    enum completion_styles style, completion_fn fn);
+                              enum completion_styles style,
+                              completion_fn fn);
 void input_line_free(rp_input_line * line);
 
-edit_status execute_edit_action(rp_input_line *line, KeySym ch,
-    unsigned int modifier, char *keysym_buf);
+edit_status execute_edit_action(rp_input_line * line, KeySym ch,
+                                unsigned int modifier, char *keysym_buf);
 
-#endif	/* ! _POISON_EDITOR_H */
+#endif                          /* ! _POISON_EDITOR_H */

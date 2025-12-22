@@ -25,133 +25,125 @@
 
 /* Keep track of a set of numbers. For frames and windows. */
 struct numset {
-	/* A list of the numbers taken. */
-	int *numbers_taken;
+    /* A list of the numbers taken. */
+    int *numbers_taken;
 
-	/*
-	 * the number of numbers currently stored in the numbers_taken array.
-	 */
-	int num_taken;
+    /*
+     * the number of numbers currently stored in the numbers_taken array.
+     */
+    int num_taken;
 
-	/* the size of the numbers_taken array. */
-	int max_taken;
+    /* the size of the numbers_taken array. */
+    int max_taken;
 };
 
 /* Initialize a numset structure. */
-static void
-numset_init(struct numset *ns)
+static void numset_init(struct numset *ns)
 {
-	ns->max_taken = 10;
-	ns->num_taken = 0;
+    ns->max_taken = 10;
+    ns->num_taken = 0;
 
-	ns->numbers_taken = xmalloc(ns->max_taken * sizeof(int));
+    ns->numbers_taken = xmalloc(ns->max_taken * sizeof(int));
 }
 
-static int
-numset_num_is_taken(struct numset *ns, int n)
+static int numset_num_is_taken(struct numset *ns, int n)
 {
-	int i;
+    int i;
 
-	for (i = 0; i < ns->num_taken; i++) {
-		if (ns->numbers_taken[i] == n)
-			return 1;
-	}
-	return 0;
+    for (i = 0; i < ns->num_taken; i++) {
+        if (ns->numbers_taken[i] == n)
+            return 1;
+    }
+    return 0;
 }
 
 /* returns index into numbers_taken that can be used. */
-static int
-numset_find_empty_cell(struct numset *ns)
+static int numset_find_empty_cell(struct numset *ns)
 {
-	int i;
+    int i;
 
-	for (i = 0; i < ns->num_taken; i++) {
-		if (ns->numbers_taken[i] == -1)
-			return i;
-	}
+    for (i = 0; i < ns->num_taken; i++) {
+        if (ns->numbers_taken[i] == -1)
+            return i;
+    }
 
-	/* no vacant ones, so grow the array. */
-	if (ns->num_taken >= ns->max_taken) {
-		ns->max_taken *= 2;
-		ns->numbers_taken = xrealloc(ns->numbers_taken,
-		    sizeof(int) * ns->max_taken);
-	}
-	ns->num_taken++;
+    /* no vacant ones, so grow the array. */
+    if (ns->num_taken >= ns->max_taken) {
+        ns->max_taken *= 2;
+        ns->numbers_taken = xrealloc(ns->numbers_taken,
+                                     sizeof(int) * ns->max_taken);
+    }
+    ns->num_taken++;
 
-	return ns->num_taken - 1;
+    return ns->num_taken - 1;
 }
 
-int
-numset_add_num(struct numset *ns, int n)
+int numset_add_num(struct numset *ns, int n)
 {
-	int ec;
+    int ec;
 
-	if (numset_num_is_taken(ns, n))
-		return 0;	/* failed. */
+    if (numset_num_is_taken(ns, n))
+        return 0;               /* failed. */
 
-	/*
-	 * numset_find_empty_cell calls realloc on numbers_taken. So store the
-	 * ret val in ec then use ec as an index into the array.
-	 */
-	ec = numset_find_empty_cell(ns);
-	ns->numbers_taken[ec] = n;
-	return 1;	/* success! */
+    /*
+     * numset_find_empty_cell calls realloc on numbers_taken. So store the
+     * ret val in ec then use ec as an index into the array.
+     */
+    ec = numset_find_empty_cell(ns);
+    ns->numbers_taken[ec] = n;
+    return 1;                   /* success! */
 }
 
 /*
  * returns a unique number that can be used as the window number in the program
  * bar.
  */
-int
-numset_request(struct numset *ns)
+int numset_request(struct numset *ns)
 {
-	int i;
+    int i;
 
-	/*
-	 * look for a unique number, and add it to the list of taken numbers.
-	 */
-	i = 0;
-	while (!numset_add_num(ns, i))
-		i++;
+    /*
+     * look for a unique number, and add it to the list of taken numbers.
+     */
+    i = 0;
+    while (!numset_add_num(ns, i))
+        i++;
 
-	return i;
+    return i;
 }
 
 /*
  * When a window is destroyed, it gives back its window number with this
  * function.
  */
-void
-numset_release(struct numset *ns, int n)
+void numset_release(struct numset *ns, int n)
 {
-	int i;
+    int i;
 
-	if (n < 0)
-		warnx("ns=%p attempt to release %d!", ns, n);
+    if (n < 0)
+        warnx("ns=%p attempt to release %d!", ns, n);
 
-	for (i = 0; i < ns->num_taken; i++) {
-		if (ns->numbers_taken[i] == n) {
-			ns->numbers_taken[i] = -1;
-			return;
-		}
-	}
+    for (i = 0; i < ns->num_taken; i++) {
+        if (ns->numbers_taken[i] == n) {
+            ns->numbers_taken[i] = -1;
+            return;
+        }
+    }
 }
 
 /* Create a new numset and return a pointer to it. */
-struct numset *
-numset_new(void)
+struct numset *numset_new(void)
 {
-	struct numset *ns;
+    struct numset *ns;
 
-	ns = xmalloc(sizeof(struct numset));
-	numset_init(ns);
-	return ns;
+    ns = xmalloc(sizeof(struct numset));
+    numset_init(ns);
+    return ns;
 }
 
 /* Free a numset structure and it's internal data. */
-void
-numset_free(struct numset *ns)
+void numset_free(struct numset *ns)
 {
-	free(ns->numbers_taken);
-	free(ns);
+    free(ns->numbers_taken);
+    free(ns);
 }

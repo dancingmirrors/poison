@@ -29,470 +29,446 @@
 #include "poison.h"
 
 /* bind functions */
-static edit_status editor_forward_char(rp_input_line *line);
-static edit_status editor_backward_char(rp_input_line *line);
-static edit_status editor_forward_word(rp_input_line *line);
-static edit_status editor_backward_word(rp_input_line *line);
-static edit_status editor_beginning_of_line(rp_input_line *line);
-static edit_status editor_end_of_line(rp_input_line *line);
-static edit_status editor_delete_char(rp_input_line *line);
-static edit_status editor_backward_delete_char(rp_input_line *line);
-static edit_status editor_kill_word(rp_input_line *line);
-static edit_status editor_backward_kill_word(rp_input_line *line);
-static edit_status editor_kill_line(rp_input_line *line);
-static edit_status editor_paste_selection(rp_input_line *line);
-static edit_status editor_abort(rp_input_line *line);
-static edit_status editor_no_action(rp_input_line *line);
-static edit_status editor_enter(rp_input_line *line);
-static edit_status editor_history_previous(rp_input_line *line);
-static edit_status editor_history_next(rp_input_line *line);
-static edit_status editor_backward_kill_line(rp_input_line *line);
-static edit_status editor_complete_prev(rp_input_line *line);
-static edit_status editor_complete_next(rp_input_line *line);
+static edit_status editor_forward_char(rp_input_line * line);
+static edit_status editor_backward_char(rp_input_line * line);
+static edit_status editor_forward_word(rp_input_line * line);
+static edit_status editor_backward_word(rp_input_line * line);
+static edit_status editor_beginning_of_line(rp_input_line * line);
+static edit_status editor_end_of_line(rp_input_line * line);
+static edit_status editor_delete_char(rp_input_line * line);
+static edit_status editor_backward_delete_char(rp_input_line * line);
+static edit_status editor_kill_word(rp_input_line * line);
+static edit_status editor_backward_kill_word(rp_input_line * line);
+static edit_status editor_kill_line(rp_input_line * line);
+static edit_status editor_paste_selection(rp_input_line * line);
+static edit_status editor_abort(rp_input_line * line);
+static edit_status editor_no_action(rp_input_line * line);
+static edit_status editor_enter(rp_input_line * line);
+static edit_status editor_history_previous(rp_input_line * line);
+static edit_status editor_history_next(rp_input_line * line);
+static edit_status editor_backward_kill_line(rp_input_line * line);
+static edit_status editor_complete_prev(rp_input_line * line);
+static edit_status editor_complete_next(rp_input_line * line);
 
 /* default edit action */
-static edit_status editor_insert(rp_input_line *line, char *keysym_buf);
+static edit_status editor_insert(rp_input_line * line, char *keysym_buf);
 
 typedef struct edit_binding edit_binding;
 
 struct edit_binding {
-	struct rp_key key;
-	       edit_status(*func) (rp_input_line *);
+    struct rp_key key;
+     edit_status(*func) (rp_input_line *);
 };
 
 static edit_binding edit_bindings[] =
-	{{{XK_g, RP_CONTROL_MASK}, editor_abort},
-	{{XK_Escape, 0}, editor_abort},
-	{{XK_f, RP_CONTROL_MASK}, editor_forward_char},
-	{{XK_Right, 0}, editor_forward_char},
-	{{XK_b, RP_CONTROL_MASK}, editor_backward_char},
-	{{XK_Left, 0}, editor_backward_char},
-	{{XK_f, RP_META_MASK}, editor_forward_word},
-	{{XK_b, RP_META_MASK}, editor_backward_word},
-	{{XK_a, RP_CONTROL_MASK}, editor_beginning_of_line},
-	{{XK_Home, 0}, editor_beginning_of_line},
-	{{XK_e, RP_CONTROL_MASK}, editor_end_of_line},
-	{{XK_End, 0}, editor_end_of_line},
-	{{XK_d, RP_CONTROL_MASK}, editor_delete_char},
-	{{XK_Delete, 0}, editor_delete_char},
-	{{XK_BackSpace, 0}, editor_backward_delete_char},
-	{{XK_h, RP_CONTROL_MASK}, editor_backward_delete_char},
-	{{XK_BackSpace, RP_META_MASK}, editor_backward_kill_word},
-	{{XK_d, RP_META_MASK}, editor_kill_word},
-	{{XK_k, RP_CONTROL_MASK}, editor_kill_line},
-	{{XK_u, RP_CONTROL_MASK}, editor_backward_kill_line},
-	{{XK_y, RP_CONTROL_MASK}, editor_paste_selection},
-	{{XK_p, RP_CONTROL_MASK}, editor_history_previous},
-	{{XK_Up, 0}, editor_history_previous},
-	{{XK_n, RP_CONTROL_MASK}, editor_history_next},
-	{{XK_Down, 0}, editor_history_next},
-	{{XK_Return, 0}, editor_enter},
-	{{XK_m, RP_CONTROL_MASK}, editor_enter},
-	{{XK_KP_Enter, 0}, editor_enter},
-	{{XK_Tab, 0}, editor_complete_next},
-	{{XK_ISO_Left_Tab, 0}, editor_complete_prev},
-	{{0, 0}, 0},
+    { { { XK_g, RP_CONTROL_MASK}, editor_abort },
+{ { XK_Escape, 0}, editor_abort },
+{ { XK_f, RP_CONTROL_MASK}, editor_forward_char },
+{ { XK_Right, 0}, editor_forward_char },
+{ { XK_b, RP_CONTROL_MASK}, editor_backward_char },
+{ { XK_Left, 0}, editor_backward_char },
+{ { XK_f, RP_META_MASK}, editor_forward_word },
+{ { XK_b, RP_META_MASK}, editor_backward_word },
+{ { XK_a, RP_CONTROL_MASK}, editor_beginning_of_line },
+{ { XK_Home, 0}, editor_beginning_of_line },
+{ { XK_e, RP_CONTROL_MASK}, editor_end_of_line },
+{ { XK_End, 0}, editor_end_of_line },
+{ { XK_d, RP_CONTROL_MASK}, editor_delete_char },
+{ { XK_Delete, 0}, editor_delete_char },
+{ { XK_BackSpace, 0}, editor_backward_delete_char },
+{ { XK_h, RP_CONTROL_MASK}, editor_backward_delete_char },
+{ { XK_BackSpace, RP_META_MASK}, editor_backward_kill_word },
+{ { XK_d, RP_META_MASK}, editor_kill_word },
+{ { XK_k, RP_CONTROL_MASK}, editor_kill_line },
+{ { XK_u, RP_CONTROL_MASK}, editor_backward_kill_line },
+{ { XK_y, RP_CONTROL_MASK}, editor_paste_selection },
+{ { XK_p, RP_CONTROL_MASK}, editor_history_previous },
+{ { XK_Up, 0}, editor_history_previous },
+{ { XK_n, RP_CONTROL_MASK}, editor_history_next },
+{ { XK_Down, 0}, editor_history_next },
+{ { XK_Return, 0}, editor_enter },
+{ { XK_m, RP_CONTROL_MASK}, editor_enter },
+{ { XK_KP_Enter, 0}, editor_enter },
+{ { XK_Tab, 0}, editor_complete_next },
+{ { XK_ISO_Left_Tab, 0}, editor_complete_prev },
+{ { 0, 0}, 0 },
 };
 
-rp_input_line *
-input_line_new(char *prompt, char *preinput, enum completion_styles style,
-    completion_fn fn)
+rp_input_line *input_line_new(char *prompt, char *preinput,
+                              enum completion_styles style,
+                              completion_fn fn)
 {
-	rp_input_line *line;
-	size_t length;
+    rp_input_line *line;
+    size_t length;
 
-	line = xmalloc(sizeof(rp_input_line));
-	line->prompt = prompt;
-	line->compl = completions_new(fn, style);
+    line = xmalloc(sizeof(rp_input_line));
+    line->prompt = prompt;
+    line->compl = completions_new(fn, style);
 
-	/* Allocate some memory to start with (100 extra bytes) */
-	length = strlen(preinput);
-	line->size = length + 1 + 100;
-	line->buffer = xmalloc(line->size);
+    /* Allocate some memory to start with (100 extra bytes) */
+    length = strlen(preinput);
+    line->size = length + 1 + 100;
+    line->buffer = xmalloc(line->size);
 
-	/* load in the preinput */
-	memcpy(line->buffer, preinput, length);
-	line->buffer[length] = '\0';
-	line->position = line->length = length;
+    /* load in the preinput */
+    memcpy(line->buffer, preinput, length);
+    line->buffer[length] = '\0';
+    line->position = line->length = length;
 
-	return line;
+    return line;
 }
 
-void
-input_line_free(rp_input_line *line)
+void input_line_free(rp_input_line *line)
 {
-	completions_free(line->compl);
-	free(line->buffer);
-	free(line);
+    completions_free(line->compl);
+    free(line->buffer);
+    free(line);
 }
 
 edit_status
 execute_edit_action(rp_input_line *line, KeySym ch, unsigned int modifier,
-    char *keysym_buf)
+                    char *keysym_buf)
 {
-	struct edit_binding *binding = NULL;
-	int found_binding = 0;
-	edit_status status;
+    struct edit_binding *binding = NULL;
+    int found_binding = 0;
+    edit_status status;
 
-	for (binding = edit_bindings; binding->func; binding++) {
-		if (ch == binding->key.sym && modifier == binding->key.state) {
-			found_binding = 1;
-			break;
-		}
-	}
+    for (binding = edit_bindings; binding->func; binding++) {
+        if (ch == binding->key.sym && modifier == binding->key.state) {
+            found_binding = 1;
+            break;
+        }
+    }
 
-	if (found_binding)
-		status = binding->func(line);
-	else if (modifier && modifier != RP_SHIFT_MASK)
-		status = editor_no_action(line);
-	else
-		status = editor_insert(line, keysym_buf);
+    if (found_binding)
+        status = binding->func(line);
+    else if (modifier && modifier != RP_SHIFT_MASK)
+        status = editor_no_action(line);
+    else
+        status = editor_insert(line, keysym_buf);
 
-	return status;
+    return status;
 }
 
-static edit_status
-editor_forward_char(rp_input_line *line)
+static edit_status editor_forward_char(rp_input_line *line)
 {
-	if (line->position == line->length)
-		return EDIT_NO_OP;
+    if (line->position == line->length)
+        return EDIT_NO_OP;
 
-	if (isu8start(line->buffer[line->position])) {
-		do
-			line->position++;
-		while (isu8cont(line->buffer[line->position]));
-	} else
-		line->position++;
+    if (isu8start(line->buffer[line->position])) {
+        do
+            line->position++;
+        while (isu8cont(line->buffer[line->position]));
+    } else
+        line->position++;
 
-	return EDIT_MOVE;
+    return EDIT_MOVE;
 }
 
-static edit_status
-editor_backward_char(rp_input_line *line)
+static edit_status editor_backward_char(rp_input_line *line)
 {
-	if (line->position == 0)
-		return EDIT_NO_OP;
+    if (line->position == 0)
+        return EDIT_NO_OP;
 
-	do {
-		line->position--;
-	} while (line->position > 0 && isu8cont(line->buffer[line->position]));
+    do {
+        line->position--;
+    } while (line->position > 0 && isu8cont(line->buffer[line->position]));
 
-	return EDIT_MOVE;
+    return EDIT_MOVE;
 }
 
-static edit_status
-editor_forward_word(rp_input_line *line)
+static edit_status editor_forward_word(rp_input_line *line)
 {
-	if (line->position == line->length)
-		return EDIT_NO_OP;
+    if (line->position == line->length)
+        return EDIT_NO_OP;
 
-	while (line->position < line->length
-	    && !isalnum((unsigned char) line->buffer[line->position]))
-		line->position++;
+    while (line->position < line->length
+           && !isalnum((unsigned char) line->buffer[line->position]))
+        line->position++;
 
-	while (line->position < line->length
-	    && (isalnum((unsigned char) line->buffer[line->position])
-		|| isu8char(line->buffer[line->position])))
-		line->position++;
+    while (line->position < line->length
+           && (isalnum((unsigned char) line->buffer[line->position])
+               || isu8char(line->buffer[line->position])))
+        line->position++;
 
-	return EDIT_MOVE;
+    return EDIT_MOVE;
 }
 
-static edit_status
-editor_backward_word(rp_input_line *line)
+static edit_status editor_backward_word(rp_input_line *line)
 {
-	if (line->position == 0)
-		return EDIT_NO_OP;
+    if (line->position == 0)
+        return EDIT_NO_OP;
 
-	while (line->position > 0 &&
-	    !isalnum((unsigned char)line->buffer[line->position]))
-		line->position--;
+    while (line->position > 0 &&
+           !isalnum((unsigned char) line->buffer[line->position]))
+        line->position--;
 
-	while (line->position > 0 &&
-	    (isalnum((unsigned char)line->buffer[line->position])
-		|| isu8char(line->buffer[line->position])))
-		line->position--;
+    while (line->position > 0 &&
+           (isalnum((unsigned char) line->buffer[line->position])
+            || isu8char(line->buffer[line->position])))
+        line->position--;
 
-	return EDIT_MOVE;
+    return EDIT_MOVE;
 }
 
-static edit_status
-editor_beginning_of_line(rp_input_line *line)
+static edit_status editor_beginning_of_line(rp_input_line *line)
 {
-	if (line->position == 0)
-		return EDIT_NO_OP;
-	else {
-		line->position = 0;
-		return EDIT_MOVE;
-	}
+    if (line->position == 0)
+        return EDIT_NO_OP;
+    else {
+        line->position = 0;
+        return EDIT_MOVE;
+    }
 }
 
-static edit_status
-editor_end_of_line(rp_input_line *line)
+static edit_status editor_end_of_line(rp_input_line *line)
 {
-	if (line->position == line->length)
-		return EDIT_NO_OP;
-	else {
-		line->position = line->length;
-		return EDIT_MOVE;
-	}
+    if (line->position == line->length)
+        return EDIT_NO_OP;
+    else {
+        line->position = line->length;
+        return EDIT_MOVE;
+    }
 }
 
-static edit_status
-editor_delete_char(rp_input_line *line)
+static edit_status editor_delete_char(rp_input_line *line)
 {
-	size_t diff = 0;
+    size_t diff = 0;
 
-	if (line->position == line->length)
-		return EDIT_NO_OP;
+    if (line->position == line->length)
+        return EDIT_NO_OP;
 
-	if (isu8start(line->buffer[line->position])) {
-		do {
-			diff++;
-		} while (isu8cont(line->buffer[line->position + diff]));
-	} else
-		diff++;
+    if (isu8start(line->buffer[line->position])) {
+        do {
+            diff++;
+        } while (isu8cont(line->buffer[line->position + diff]));
+    } else
+        diff++;
 
-	memmove(&line->buffer[line->position],
-	    &line->buffer[line->position + diff],
-	    line->length - line->position + diff + 1);
+    memmove(&line->buffer[line->position],
+            &line->buffer[line->position + diff],
+            line->length - line->position + diff + 1);
 
-	line->length -= diff;
+    line->length -= diff;
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
-static edit_status
-editor_backward_delete_char(rp_input_line *line)
+static edit_status editor_backward_delete_char(rp_input_line *line)
 {
-	size_t diff = 1;
+    size_t diff = 1;
 
-	if (line->position == 0)
-		return EDIT_NO_OP;
+    if (line->position == 0)
+        return EDIT_NO_OP;
 
-	while (line->position - diff > 0 &&
-	    isu8cont(line->buffer[line->position - diff]))
-		diff++;
+    while (line->position - diff > 0 &&
+           isu8cont(line->buffer[line->position - diff]))
+        diff++;
 
-	memmove(&line->buffer[line->position - diff],
-	    &line->buffer[line->position],
-	    line->length - line->position + 1);
+    memmove(&line->buffer[line->position - diff],
+            &line->buffer[line->position],
+            line->length - line->position + 1);
 
-	line->position -= diff;
-	line->length -= diff;
+    line->position -= diff;
+    line->length -= diff;
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
-static edit_status
-editor_kill_word(rp_input_line *line)
+static edit_status editor_kill_word(rp_input_line *line)
 {
-	size_t diff = 0;
+    size_t diff = 0;
 
-	if (line->position == line->length)
-		return EDIT_NO_OP;
+    if (line->position == line->length)
+        return EDIT_NO_OP;
 
-	while (line->position + diff < line->length &&
-	    !isalnum((unsigned char) line->buffer[line->position + diff]))
-		diff++;
+    while (line->position + diff < line->length &&
+           !isalnum((unsigned char) line->buffer[line->position + diff]))
+        diff++;
 
-	while (line->position + diff < line->length
-	    && (isalnum((unsigned char) line->buffer[line->position + diff])
-		|| isu8char(line->buffer[line->position + diff])))
-		diff++;
+    while (line->position + diff < line->length
+           && (isalnum((unsigned char) line->buffer[line->position + diff])
+               || isu8char(line->buffer[line->position + diff])))
+        diff++;
 
-	/* Add the word to the X11 selection. */
-	set_nselection(&line->buffer[line->position], diff);
+    /* Add the word to the X11 selection. */
+    set_nselection(&line->buffer[line->position], diff);
 
-	memmove(&line->buffer[line->position],
-	    &line->buffer[line->position + diff],
-	    line->length - line->position + diff + 1);
+    memmove(&line->buffer[line->position],
+            &line->buffer[line->position + diff],
+            line->length - line->position + diff + 1);
 
-	line->length -= diff;
+    line->length -= diff;
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
-static edit_status
-editor_backward_kill_word(rp_input_line *line)
+static edit_status editor_backward_kill_word(rp_input_line *line)
 {
-	size_t diff = 1;
+    size_t diff = 1;
 
-	if (line->position == 0)
-		return EDIT_NO_OP;
+    if (line->position == 0)
+        return EDIT_NO_OP;
 
-	while (line->position - diff > 0 &&
-	    !isalnum((unsigned char) line->buffer[line->position - diff]))
-		diff++;
+    while (line->position - diff > 0 &&
+           !isalnum((unsigned char) line->buffer[line->position - diff]))
+        diff++;
 
-	while (line->position - diff > 0
-	    && (isalnum((unsigned char) line->buffer[line->position - diff])
-		|| isu8char(line->buffer[line->position - diff])))
-		diff++;
+    while (line->position - diff > 0
+           && (isalnum((unsigned char) line->buffer[line->position - diff])
+               || isu8char(line->buffer[line->position - diff])))
+        diff++;
 
-	/* Add the word to the X11 selection. */
-	set_nselection(&line->buffer[line->position - diff], diff);
+    /* Add the word to the X11 selection. */
+    set_nselection(&line->buffer[line->position - diff], diff);
 
-	memmove(&line->buffer[line->position - diff],
-	    &line->buffer[line->position],
-	    line->length - line->position + 1);
+    memmove(&line->buffer[line->position - diff],
+            &line->buffer[line->position],
+            line->length - line->position + 1);
 
-	line->position -= diff;
-	line->length -= diff;
+    line->position -= diff;
+    line->length -= diff;
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
-static edit_status
-editor_kill_line(rp_input_line *line)
+static edit_status editor_kill_line(rp_input_line *line)
 {
-	if (line->position == line->length)
-		return EDIT_NO_OP;
+    if (line->position == line->length)
+        return EDIT_NO_OP;
 
-	/* Add the line to the X11 selection. */
-	set_selection(&line->buffer[line->position]);
+    /* Add the line to the X11 selection. */
+    set_selection(&line->buffer[line->position]);
 
-	line->length = line->position;
-	line->buffer[line->length] = '\0';
+    line->length = line->position;
+    line->buffer[line->length] = '\0';
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
 /* Do the dirty work of killing a line backwards. */
-static void
-backward_kill_line(rp_input_line *line)
+static void backward_kill_line(rp_input_line *line)
 {
-	memmove(&line->buffer[0], &line->buffer[line->position],
-	    line->length - line->position + 1);
+    memmove(&line->buffer[0], &line->buffer[line->position],
+            line->length - line->position + 1);
 
-	line->length -= line->position;
-	line->position = 0;
+    line->length -= line->position;
+    line->position = 0;
 }
 
-static edit_status
-editor_backward_kill_line(rp_input_line *line)
+static edit_status editor_backward_kill_line(rp_input_line *line)
 {
-	if (line->position == 0)
-		return EDIT_NO_OP;
+    if (line->position == 0)
+        return EDIT_NO_OP;
 
-	/* Add the line to the X11 selection. */
-	set_nselection(line->buffer, line->position);
+    /* Add the line to the X11 selection. */
+    set_nselection(line->buffer, line->position);
 
-	backward_kill_line(line);
+    backward_kill_line(line);
 
-	return EDIT_DELETE;
+    return EDIT_DELETE;
 }
 
-static edit_status
-editor_history_previous(rp_input_line *line)
+static edit_status editor_history_previous(rp_input_line *line)
 {
-	/* History functionality removed */
-	return EDIT_NO_OP;
+    /* History functionality removed */
+    return EDIT_NO_OP;
 }
 
-static edit_status
-editor_history_next(rp_input_line *line)
+static edit_status editor_history_next(rp_input_line *line)
 {
-	/* History functionality removed */
-	return EDIT_NO_OP;
+    /* History functionality removed */
+    return EDIT_NO_OP;
 }
 
-static edit_status
-editor_abort(rp_input_line *line)
+static edit_status editor_abort(rp_input_line *line)
 {
-	return EDIT_ABORT;
+    return EDIT_ABORT;
 }
 
-static edit_status
-editor_no_action(rp_input_line *line)
+static edit_status editor_no_action(rp_input_line *line)
 {
-	return EDIT_NO_OP;
+    return EDIT_NO_OP;
 }
 
-static edit_status
-editor_insert(rp_input_line *line, char *keysym_buf)
+static edit_status editor_insert(rp_input_line *line, char *keysym_buf)
 {
-	size_t nbytes;
+    size_t nbytes;
 
-	PRINT_DEBUG(("keysym_buf: '%s'\n", keysym_buf));
+    PRINT_DEBUG(("keysym_buf: '%s'\n", keysym_buf));
 
-	nbytes = strlen(keysym_buf);
-	if (line->length + nbytes > line->size - 1) {
-		line->size += nbytes + 100;
-		line->buffer = xrealloc(line->buffer, line->size);
-	}
-	memmove(&line->buffer[line->position + nbytes],
-	    &line->buffer[line->position],
-	    line->length - line->position + 1);
-	memcpy(&line->buffer[line->position], keysym_buf, nbytes);
+    nbytes = strlen(keysym_buf);
+    if (line->length + nbytes > line->size - 1) {
+        line->size += nbytes + 100;
+        line->buffer = xrealloc(line->buffer, line->size);
+    }
+    memmove(&line->buffer[line->position + nbytes],
+            &line->buffer[line->position],
+            line->length - line->position + 1);
+    memcpy(&line->buffer[line->position], keysym_buf, nbytes);
 
-	line->length += nbytes;
-	line->position += nbytes;
+    line->length += nbytes;
+    line->position += nbytes;
 
-	return EDIT_INSERT;
+    return EDIT_INSERT;
 }
 
-static edit_status
-editor_enter(rp_input_line *line)
+static edit_status editor_enter(rp_input_line *line)
 {
-	line->buffer[line->length] = '\0';
-	/* History functionality removed - history_add() call removed */
-	return EDIT_DONE;
+    line->buffer[line->length] = '\0';
+    /* History functionality removed - history_add() call removed */
+    return EDIT_DONE;
 }
 
-static edit_status
-editor_paste_selection(rp_input_line *line)
+static edit_status editor_paste_selection(rp_input_line *line)
 {
-	char *text;
+    char *text;
 
-	text = get_selection();
-	if (text) {
-		editor_insert(line, text);
-		free(text);
-		return EDIT_INSERT;
-	} else
-		return EDIT_NO_OP;
+    text = get_selection();
+    if (text) {
+        editor_insert(line, text);
+        free(text);
+        return EDIT_INSERT;
+    } else
+        return EDIT_NO_OP;
 }
 
-static edit_status
-editor_complete(rp_input_line *line, int direction)
+static edit_status editor_complete(rp_input_line *line, int direction)
 {
-	char *tmp;
-	char *s;
+    char *tmp;
+    char *s;
 
-	/*
-	 * Create our partial string that will be used for completion. It is
-	 * the characters up to the position of the cursor.
-	 */
-	tmp = xmalloc(line->position + 1);
-	memcpy(tmp, line->buffer, line->position);
-	tmp[line->position] = '\0';
+    /*
+     * Create our partial string that will be used for completion. It is
+     * the characters up to the position of the cursor.
+     */
+    tmp = xmalloc(line->position + 1);
+    memcpy(tmp, line->buffer, line->position);
+    tmp[line->position] = '\0';
 
-	/*
-	 * We don't need to free s because it's a string from the completion
-	 * list.
-	 */
-	s = completions_complete(line->compl, tmp, direction);
-	free(tmp);
+    /*
+     * We don't need to free s because it's a string from the completion
+     * list.
+     */
+    s = completions_complete(line->compl, tmp, direction);
+    free(tmp);
 
-	if (s == NULL)
-		return EDIT_NO_OP;
+    if (s == NULL)
+        return EDIT_NO_OP;
 
-	/* Insert the completion. */
-	backward_kill_line(line);
-	editor_insert(line, s);
+    /* Insert the completion. */
+    backward_kill_line(line);
+    editor_insert(line, s);
 
-	return EDIT_COMPLETE;
+    return EDIT_COMPLETE;
 }
 
-static edit_status
-editor_complete_next(rp_input_line *line)
+static edit_status editor_complete_next(rp_input_line *line)
 {
-	return editor_complete(line, COMPLETION_NEXT);
+    return editor_complete(line, COMPLETION_NEXT);
 }
 
-static edit_status
-editor_complete_prev(rp_input_line *line)
+static edit_status editor_complete_prev(rp_input_line *line)
 {
-	return editor_complete(line, COMPLETION_PREVIOUS);
+    return editor_complete(line, COMPLETION_PREVIOUS);
 }

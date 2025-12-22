@@ -19,31 +19,31 @@
 #ifndef FRAME_H
 #define FRAME_H
 
-void frame_resize_down(rp_frame *frame, int amount);
-void frame_resize_up(rp_frame *frame, int amount);
-void frame_resize_right(rp_frame *frame, int amount);
-void frame_resize_left(rp_frame *frame, int amount);
+void frame_resize_down(rp_frame * frame, int amount);
+void frame_resize_up(rp_frame * frame, int amount);
+void frame_resize_right(rp_frame * frame, int amount);
+void frame_resize_left(rp_frame * frame, int amount);
 void mark_edge_frames(void);
-int frame_height(rp_frame *frame);
-int frame_width(rp_frame *frame);
-int frame_bottom(rp_frame *frame);
-int frame_bottom_screen_edge(rp_frame *frame);
-int frame_right(rp_frame *frame);
-int frame_right_screen_edge(rp_frame *frame);
-int frame_top(rp_frame *frame);
-int frame_top_screen_edge(rp_frame *frame);
-int frame_left(rp_frame *frame);
-int frame_left_screen_edge(rp_frame *frame);
-int frame_bottom_abs(rp_frame *frame);
-int frame_right_abs(rp_frame *frame);
-int frame_top_abs(rp_frame *frame);
-int frame_left_abs(rp_frame *frame);
+int frame_height(rp_frame * frame);
+int frame_width(rp_frame * frame);
+int frame_bottom(rp_frame * frame);
+int frame_bottom_screen_edge(rp_frame * frame);
+int frame_right(rp_frame * frame);
+int frame_right_screen_edge(rp_frame * frame);
+int frame_top(rp_frame * frame);
+int frame_top_screen_edge(rp_frame * frame);
+int frame_left(rp_frame * frame);
+int frame_left_screen_edge(rp_frame * frame);
+int frame_bottom_abs(rp_frame * frame);
+int frame_right_abs(rp_frame * frame);
+int frame_top_abs(rp_frame * frame);
+int frame_left_abs(rp_frame * frame);
 
-rp_frame *frame_new(rp_vscreen *v);
-void frame_free(rp_vscreen *v, rp_frame *f);
-rp_frame *frame_copy(rp_frame *frame);
-char *frame_dump(rp_frame *frame, rp_vscreen *vscreen);
-rp_frame *frame_read(char *str, rp_vscreen *vscreen);
+rp_frame *frame_new(rp_vscreen * v);
+void frame_free(rp_vscreen * v, rp_frame * f);
+rp_frame *frame_copy(rp_frame * frame);
+char *frame_dump(rp_frame * frame, rp_vscreen * vscreen);
+rp_frame *frame_read(char *str, rp_vscreen * vscreen);
 
 rp_vscreen *frames_vscreen(rp_frame *);
 

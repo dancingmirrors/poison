@@ -28,4 +28,4 @@ void numset_release(struct numset *ns, int n);
 int numset_request(struct numset *ns);
 int numset_add_num(struct numset *ns, int n);
 
-#endif	/* ! _POISON_NUMBER_H */
+#endif                          /* ! _POISON_NUMBER_H */

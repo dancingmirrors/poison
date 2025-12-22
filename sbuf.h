@@ -23,12 +23,12 @@
 #include <stdlib.h>
 
 struct sbuf {
-	char *data;
-	size_t len;
-	size_t maxsz;
+    char *data;
+    size_t len;
+    size_t maxsz;
 
-	/* sbuf can exist in a list. */
-	struct list_head node;
+    /* sbuf can exist in a list. */
+    struct list_head node;
 };
 
 struct sbuf *sbuf_new(size_t initsz);
@@ -40,8 +40,8 @@ char *sbuf_utf8_nconcat(struct sbuf *b, const char *s, int width);
 char *sbuf_copy(struct sbuf *b, const char *str);
 char *sbuf_clear(struct sbuf *b);
 char *sbuf_get(struct sbuf *b);
-char *sbuf_printf(struct sbuf *b, char *fmt,...);
-char *sbuf_printf_concat(struct sbuf *b, char *fmt,...);
+char *sbuf_printf(struct sbuf *b, char *fmt, ...);
+char *sbuf_printf_concat(struct sbuf *b, char *fmt, ...);
 void sbuf_chop(struct sbuf *b);
 
-#endif	/* ! _POISON_SBUF_H */
+#endif                          /* ! _POISON_SBUF_H */

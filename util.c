@@ -22,138 +22,131 @@
 #include <err.h>
 #include <unistd.h>
 
-__dead void
-fatal(const char *msg)
+__dead void fatal(const char *msg)
 {
-	fprintf(stderr, PROGNAME ": %s", msg);
-	abort();
+    fprintf(stderr, PROGNAME ": %s", msg);
+    abort();
 }
 
-void *
-xmalloc(size_t size)
+void *xmalloc(size_t size)
 {
-	void *value;
+    void *value;
 
-	value = malloc(size);
-	if (value == NULL)
-		fatal("Virtual memory exhausted");
-	return value;
+    value = malloc(size);
+    if (value == NULL)
+        fatal("Virtual memory exhausted");
+    return value;
 }
 
-void *
-xrealloc(void *ptr, size_t size)
+void *xrealloc(void *ptr, size_t size)
 {
-	void *value;
+    void *value;
 
-	value = realloc(ptr, size);
-	if (value == NULL)
-		fatal("Virtual memory exhausted");
-	return value;
+    value = realloc(ptr, size);
+    if (value == NULL)
+        fatal("Virtual memory exhausted");
+    return value;
 }
 
-char *
-xstrdup(const char *s)
+char *xstrdup(const char *s)
 {
-	char *value;
-	value = strdup(s);
-	if (value == NULL)
-		fatal("Virtual memory exhausted");
-	return value;
+    char *value;
+    value = strdup(s);
+    if (value == NULL)
+        fatal("Virtual memory exhausted");
+    return value;
 }
 
 /* Return a new string based on fmt. */
-char *
-xvsprintf(char *fmt, va_list ap)
+char *xvsprintf(char *fmt, va_list ap)
 {
-	int size, nchars;
-	char *buffer;
-	va_list ap_copy;
+    int size, nchars;
+    char *buffer;
+    va_list ap_copy;
 
-	/* A reasonable starting value. */
-	size = strlen(fmt) + 1;
-	buffer = xmalloc(size);
+    /* A reasonable starting value. */
+    size = strlen(fmt) + 1;
+    buffer = xmalloc(size);
 
-	while (1) {
+    while (1) {
 #if defined(va_copy)
-		va_copy(ap_copy, ap);
+        va_copy(ap_copy, ap);
 #elif defined(__va_copy)
-		__va_copy(ap_copy, ap);
+        __va_copy(ap_copy, ap);
 #else
-		/*
-		 * If there is no copy macro then this MAY work. On some
-		 * systems this could fail because va_list is a pointer so
-		 * assigning one to the other as below wouldn't make a copy of
-		 * the data, but just the pointer to the data.
-		 */
-		ap_copy = ap;
+        /*
+         * If there is no copy macro then this MAY work. On some
+         * systems this could fail because va_list is a pointer so
+         * assigning one to the other as below wouldn't make a copy of
+         * the data, but just the pointer to the data.
+         */
+        ap_copy = ap;
 #endif
-		nchars = vsnprintf(buffer, size, fmt, ap_copy);
+        nchars = vsnprintf(buffer, size, fmt, ap_copy);
 #if defined(va_copy) || defined(__va_copy)
-		va_end(ap_copy);
+        va_end(ap_copy);
 #endif
 
-		if (nchars > -1 && nchars < size)
-			return buffer;
-		else if (nchars > -1)
-			size = nchars + 1;
-		else {
-			free(buffer);
-			break;
-		}
+        if (nchars > -1 && nchars < size)
+            return buffer;
+        else if (nchars > -1)
+            size = nchars + 1;
+        else {
+            free(buffer);
+            break;
+        }
 
-		/* Resize the buffer and try again. */
-		buffer = xrealloc(buffer, size);
-	}
+        /* Resize the buffer and try again. */
+        buffer = xrealloc(buffer, size);
+    }
 
-	return xstrdup("<FAILURE>");
+    return xstrdup("<FAILURE>");
 }
 
 /* Return a new string based on fmt. */
-char *
-xsprintf(char *fmt,...)
+char *xsprintf(char *fmt, ...)
 {
-	char *buffer;
-	va_list ap;
+    char *buffer;
+    va_list ap;
 
-	va_start(ap, fmt);
-	buffer = xvsprintf(fmt, ap);
-	va_end(ap);
+    va_start(ap, fmt);
+    buffer = xvsprintf(fmt, ap);
+    va_end(ap);
 
-	return buffer;
+    return buffer;
 }
 
 /* strtok but do it for whitespace and be locale compliant. */
-char *
-strtok_ws(char *s)
+char *strtok_ws(char *s)
 {
-	char *nonws;
-	static char *last = NULL;
+    char *nonws;
+    static char *last = NULL;
 
-	if (s != NULL)
-		last = s;
-	else if (last == NULL) {
-		warnx("strtok_ws() called but not initalized, this is a *BUG*");
-		abort();
-	}
-	/* skip to first non-whitespace char. */
-	while (*last && isspace((unsigned char) *last))
-		last++;
+    if (s != NULL)
+        last = s;
+    else if (last == NULL) {
+        warnx("strtok_ws() called but not initalized, this is a *BUG*");
+        abort();
+    }
+    /* skip to first non-whitespace char. */
+    while (*last && isspace((unsigned char) *last))
+        last++;
 
-	/*
-	 * If we reached the end of the string here then there is no more data.
-	 */
-	if (*last == '\0')
-		return NULL;
+    /*
+     * If we reached the end of the string here then there is no more data.
+     */
+    if (*last == '\0')
+        return NULL;
 
-	/* Now skip to the end of the data. */
-	nonws = last;
-	while (*last && !isspace((unsigned char) *last))
-		last++;
-	if (*last) {
-		*last = '\0';
-		last++;
-	}
-	return nonws;
+    /* Now skip to the end of the data. */
+    nonws = last;
+    while (*last && !isspace((unsigned char) *last))
+        last++;
+    if (*last) {
+        *last = '\0';
+        last++;
+    }
+    return nonws;
 }
 
 /*
@@ -163,27 +156,26 @@ strtok_ws(char *s)
  * If the compositor is already running, the new instance will detect this
  * and exit gracefully, making this safe to call on WM restart.
  */
-void
-start_compositor(void)
+void start_compositor(void)
 {
-	int pid;
+    int pid;
 
-	PRINT_DEBUG(("Starting commoner compositor\n"));
+    PRINT_DEBUG(("Starting commoner compositor\n"));
 
-	pid = fork();
-	if (pid == 0) {
-		/* Child process - use execlp to search PATH */
-		execlp("commoner", "commoner",
-		    "--daemonize", "--unredir-if-possible", (char *)NULL);
-		/* If execlp fails, try current directory */
-		execl("./commoner", "commoner",
-		    "--daemonize", "--unredir-if-possible", (char *)NULL);
-		/* If that also fails, exit */
-		_exit(1);
-	} else if (pid < 0) {
-		warnx("Failed to fork for compositor");
-	}
-	/* Parent continues */
+    pid = fork();
+    if (pid == 0) {
+        /* Child process - use execlp to search PATH */
+        execlp("commoner", "commoner",
+               "--daemonize", "--unredir-if-possible", (char *) NULL);
+        /* If execlp fails, try current directory */
+        execl("./commoner", "commoner",
+              "--daemonize", "--unredir-if-possible", (char *) NULL);
+        /* If that also fails, exit */
+        _exit(1);
+    } else if (pid < 0) {
+        warnx("Failed to fork for compositor");
+    }
+    /* Parent continues */
 }
 
 /*
@@ -191,81 +183,80 @@ start_compositor(void)
  * Supports $VAR and ${VAR} syntax.
  * Returns a newly allocated string that must be freed by the caller.
  */
-char *
-expand_env_vars(const char *str)
+char *expand_env_vars(const char *str)
 {
-	char *result;
-	const char *p;
-	size_t len, result_len, result_cap;
+    char *result;
+    const char *p;
+    size_t len, result_len, result_cap;
 
-	if (!str)
-		return NULL;
+    if (!str)
+        return NULL;
 
-	/* Initial allocation */
-	result_cap = strlen(str) * 2;
-	result = xmalloc(result_cap);
-	result_len = 0;
+    /* Initial allocation */
+    result_cap = strlen(str) * 2;
+    result = xmalloc(result_cap);
+    result_len = 0;
 
-	p = str;
-	while (*p) {
-		if (*p == '$') {
-			const char *var_start;
-			char *var_name;
-			const char *var_value;
-			size_t var_name_len;
-			int braced = 0;
+    p = str;
+    while (*p) {
+        if (*p == '$') {
+            const char *var_start;
+            char *var_name;
+            const char *var_value;
+            size_t var_name_len;
+            int braced = 0;
 
-			p++;  /* Skip $ */
+            p++;                /* Skip $ */
 
-			/* Check for ${VAR} syntax */
-			if (*p == '{') {
-				braced = 1;
-				p++;
-			}
+            /* Check for ${VAR} syntax */
+            if (*p == '{') {
+                braced = 1;
+                p++;
+            }
 
-			var_start = p;
+            var_start = p;
 
-			/* Extract variable name */
-			if (braced) {
-				while (*p && *p != '}')
-					p++;
-				var_name_len = p - var_start;
-				if (*p == '}')
-					p++;  /* Skip closing } */
-			} else {
-				while (*p && (isalnum((unsigned char)*p) || *p == '_'))
-					p++;
-				var_name_len = p - var_start;
-			}
+            /* Extract variable name */
+            if (braced) {
+                while (*p && *p != '}')
+                    p++;
+                var_name_len = p - var_start;
+                if (*p == '}')
+                    p++;        /* Skip closing } */
+            } else {
+                while (*p && (isalnum((unsigned char) *p) || *p == '_'))
+                    p++;
+                var_name_len = p - var_start;
+            }
 
-			if (var_name_len > 0) {
-				var_name = xmalloc(var_name_len + 1);
-				memcpy(var_name, var_start, var_name_len);
-				var_name[var_name_len] = '\0';
+            if (var_name_len > 0) {
+                var_name = xmalloc(var_name_len + 1);
+                memcpy(var_name, var_start, var_name_len);
+                var_name[var_name_len] = '\0';
 
-				var_value = getenv(var_name);
-				if (var_value) {
-					len = strlen(var_value);
-					/* Ensure we have space */
-					while (result_len + len >= result_cap) {
-						result_cap *= 2;
-						result = xrealloc(result, result_cap);
-					}
-					memcpy(result + result_len, var_value, len);
-					result_len += len;
-				}
-				free(var_name);
-			}
-		} else {
-			/* Regular character */
-			if (result_len + 1 >= result_cap) {
-				result_cap *= 2;
-				result = xrealloc(result, result_cap);
-			}
-			result[result_len++] = *p++;
-		}
-	}
+                var_value = getenv(var_name);
+                if (var_value) {
+                    len = strlen(var_value);
+                    /* Ensure we have space */
+                    while (result_len + len >= result_cap) {
+                        result_cap *= 2;
+                        result = xrealloc(result, result_cap);
+                    }
+                    memcpy(result + result_len, var_value, len);
+                    result_len += len;
+                }
+                free(var_name);
+            }
+        } else {
+            /* Regular character */
+            if (result_len + 1 >= result_cap) {
+                result_cap *= 2;
+                result = xrealloc(result, result_cap);
+            }
+            result[result_len++] = *p++;
+        }
+    }
 
-	result[result_len] = '\0';
-	return result;
+    result[result_len] = '\0';
+    return result;
 }

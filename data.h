@@ -41,351 +41,351 @@ typedef struct rp_completions rp_completions;
 typedef struct rp_input_line rp_input_line;
 
 enum rp_edge {
-	EDGE_TOP = (1 << 1),
-	EDGE_LEFT = (1 << 2),
-	EDGE_RIGHT = (1 << 3),
-	EDGE_BOTTOM = (1 << 4),
+    EDGE_TOP = (1 << 1),
+    EDGE_LEFT = (1 << 2),
+    EDGE_RIGHT = (1 << 3),
+    EDGE_BOTTOM = (1 << 4),
 };
 
 struct rp_frame {
-	rp_vscreen *vscreen;
+    rp_vscreen *vscreen;
 
-	int number;
-	int x, y, width, height;
+    int number;
+    int x, y, width, height;
 
-	/* The number of the window that is focused in this frame. */
-	int win_number;
+    /* The number of the window that is focused in this frame. */
+    int win_number;
 
-	/* The number of the window to focus when restoring this frame. */
-	int restore_win_number;
+    /* The number of the window to focus when restoring this frame. */
+    int restore_win_number;
 
-	/* For determining the last frame. */
-	int last_access;
+    /* For determining the last frame. */
+    int last_access;
 
-	/*
-	 * Boolean that is set when a frame is `dedicated' (a.k.a. glued) to
-	 * one window.
-	 */
-	unsigned int dedicated;
+    /*
+     * Boolean that is set when a frame is `dedicated' (a.k.a. glued) to
+     * one window.
+     */
+    unsigned int dedicated;
 
-	/* Whether this frame is touching an edge before a screen update */
-	enum rp_edge edges;
+    /* Whether this frame is touching an edge before a screen update */
+    enum rp_edge edges;
 
-	struct list_head node;
+    struct list_head node;
 };
 
 struct rp_window {
-	rp_vscreen *vscreen;
-	Window w;
-	int state;
-	int last_access;
-	int named;
+    rp_vscreen *vscreen;
+    Window w;
+    int state;
+    int last_access;
+    int named;
 
-	/*
-	 * A number uniquely identifying this window. This is a different
-	 * number than the one given to it by the vscreen it is in. This number
-	 * is used for internal purposes, whereas the vscreen number is what
-	 * the user sees.
-	 */
-	int number;
+    /*
+     * A number uniquely identifying this window. This is a different
+     * number than the one given to it by the vscreen it is in. This number
+     * is used for internal purposes, whereas the vscreen number is what
+     * the user sees.
+     */
+    int number;
 
-	/* Window name hints. */
-	char *user_name;
-	char *wm_name;
-	char *res_name;
-	char *res_class;
+    /* Window name hints. */
+    char *user_name;
+    char *wm_name;
+    char *res_name;
+    char *res_class;
 
-	/* Dimensions */
-	int x, y, width, height, border, full_screen;
+    /* Dimensions */
+    int x, y, width, height, border, full_screen;
 
-	/* WM Hints */
-	XSizeHints *hints;
+    /* WM Hints */
+    XSizeHints *hints;
 
-	/* Colormap */
-	Colormap colormap;
+    /* Colormap */
+    Colormap colormap;
 
-	/* Is this a transient window? */
-	int transient;
-	Window transient_for;
+    /* Is this a transient window? */
+    int transient;
+    Window transient_for;
 
-	/* Does this window accept input focus (from WM_HINTS)? */
-	int accepts_input;
+    /* Does this window accept input focus (from WM_HINTS)? */
+    int accepts_input;
 
-	/* Does this window support WM_TAKE_FOCUS protocol? */
-	int supports_wm_take_focus;
+    /* Does this window support WM_TAKE_FOCUS protocol? */
+    int supports_wm_take_focus;
 
-	/* Timestamp when window was withdrawn (for cleanup of lingering windows) */
-	time_t withdrawn_at;
+    /* Timestamp when window was withdrawn (for cleanup of lingering windows) */
+    time_t withdrawn_at;
 
-	/* Is this a floated window? */
-	int floated;
+    /* Is this a floated window? */
+    int floated;
 
-	/* Saved mouse position */
-	int mouse_x, mouse_y;
+    /* Saved mouse position */
+    int mouse_x, mouse_y;
 
-	/*
-	 * The alignment of the window. Decides to what side or corner the
-	 * window sticks to.
-	 */
-	int gravity;
+    /*
+     * The alignment of the window. Decides to what side or corner the
+     * window sticks to.
+     */
+    int gravity;
 
-	/*
-	 * A window can be visible inside a frame but not the frame's current
-	 * window.  This keeps track of what frame the window was mapped into.
-	 */
-	int frame_number;
+    /*
+     * A window can be visible inside a frame but not the frame's current
+     * window.  This keeps track of what frame the window was mapped into.
+     */
+    int frame_number;
 
-	/* The frame number we want to remain in */
-	int sticky_frame;
+    /* The frame number we want to remain in */
+    int sticky_frame;
 
-	/*
-	 * Sometimes a window is intended for a certain frame. When a window is
-	 * mapped and this is >0 then use the frame (if it exists).
-	 */
-	int intended_frame_number;
+    /*
+     * Sometimes a window is intended for a certain frame. When a window is
+     * mapped and this is >0 then use the frame (if it exists).
+     */
+    int intended_frame_number;
 
-	struct list_head node;
+    struct list_head node;
 };
 
 struct rp_window_elem {
-	rp_window *win;
-	int number;
-	struct list_head node;
+    rp_window *win;
+    int number;
+    struct list_head node;
 };
 
 struct rp_global_screen {
-	Window root, wm_check;
-	unsigned long fgcolor, bgcolor, fwcolor, bwcolor, bar_bordercolor;
+    Window root, wm_check;
+    unsigned long fgcolor, bgcolor, fwcolor, bwcolor, bar_bordercolor;
 
-	/* This numset is responsible for giving out numbers for each screen */
-	struct numset *numset;
+    /* This numset is responsible for giving out numbers for each screen */
+    struct numset *numset;
 
-	/* The path to and open fd of our control socket */
-	char *control_socket_path;
-	int control_socket_fd;
+    /* The path to and open fd of our control socket */
+    char *control_socket_path;
+    int control_socket_fd;
 
-	/* The path to and open fd of our bar FIFO */
-	char *bar_fifo_path;
-	int bar_fifo_fd;
+    /* The path to and open fd of our bar FIFO */
+    char *bar_fifo_path;
+    int bar_fifo_fd;
 };
 
 struct xrandr_info {
-	int output;
-	int crtc;
-	int primary;
-	char *name;
+    int output;
+    int crtc;
+    int primary;
+    char *name;
 };
 
 struct rp_vscreen {
-	rp_screen *screen;
+    rp_screen *screen;
 
-	/* Virtual screen number, handled by rp_screen's vscreens_numset */
-	int number;
+    /* Virtual screen number, handled by rp_screen's vscreens_numset */
+    int number;
 
-	/* Name */
-	char *name;
+    /* Name */
+    char *name;
 
-	/* For determining the last vscreen. */
-	int last_access;
+    /* For determining the last vscreen. */
+    int last_access;
 
-	/*
-	 * A list of frames that may or may not contain windows. There should
-	 * always be one in the list.
-	 */
-	struct list_head frames;
+    /*
+     * A list of frames that may or may not contain windows. There should
+     * always be one in the list.
+     */
+    struct list_head frames;
 
-	/* Keep track of which numbers have been given to frames. */
-	struct numset *frames_numset;
+    /* Keep track of which numbers have been given to frames. */
+    struct numset *frames_numset;
 
-	/*
-	 * The number of the currently focused frame. One for each vscreen so
-	 * when you switch vscreens the focus doesn't get frobbed.
-	 */
-	int current_frame;
+    /*
+     * The number of the currently focused frame. One for each vscreen so
+     * when you switch vscreens the focus doesn't get frobbed.
+     */
+    int current_frame;
 
-	/* The list of windows participating in this vscreen. */
-	struct list_head mapped_windows, unmapped_windows;
+    /* The list of windows participating in this vscreen. */
+    struct list_head mapped_windows, unmapped_windows;
 
-	/*
-	 * This numset is responsible for giving out numbers for each window in
-	 * the vscreen.
-	 */
-	struct numset *numset;
+    /*
+     * This numset is responsible for giving out numbers for each window in
+     * the vscreen.
+     */
+    struct numset *numset;
 
-	struct list_head node;
+    struct list_head node;
 };
 
 struct rp_font {
-	char *name;
-	XftFont *font;
+    char *name;
+    XftFont *font;
 };
 
 struct rp_screen {
-	GC normal_gc, inverse_gc;
-	Window root, bar_window, key_window, input_window, frame_window,
-	    help_window;
-	int bar_is_raised;
-	int screen_num;	/* Our screen number as dictated by X */
-	Colormap def_cmap;
-	Cursor rat;
+    GC normal_gc, inverse_gc;
+    Window root, bar_window, key_window, input_window, frame_window,
+        help_window;
+    int bar_is_raised;
+    int screen_num;             /* Our screen number as dictated by X */
+    Colormap def_cmap;
+    Cursor rat;
 
-	/* Screen number, handled by rp_global_screen numset */
-	int number;
+    /* Screen number, handled by rp_global_screen numset */
+    int number;
 
-	struct xrandr_info xrandr;
+    struct xrandr_info xrandr;
 
-	/* Here to abstract over the Xrandr vs X screens difference */
-	int left, top, width, height;
+    /* Here to abstract over the Xrandr vs X screens difference */
+    int left, top, width, height;
 
-	char *display_string;
+    char *display_string;
 
-	/* Used by sfrestore */
-	struct sbuf *scratch_buffer;
+    /* Used by sfrestore */
+    struct sbuf *scratch_buffer;
 
-	XftFont *xft_font;
-	struct rp_font xft_font_cache[5];
-	XftColor xft_fgcolor, xft_bgcolor;
+    XftFont *xft_font;
+    struct rp_font xft_font_cache[5];
+    XftColor xft_fgcolor, xft_bgcolor;
 
-	struct list_head vscreens;
-	struct numset *vscreens_numset;
-	rp_vscreen *current_vscreen;
+    struct list_head vscreens;
+    struct numset *vscreens_numset;
+    rp_vscreen *current_vscreen;
 
-	rp_window *full_screen_win;
+    rp_window *full_screen_win;
 
-	struct sbuf *bar_text;
+    struct sbuf *bar_text;
 
-	/* This structure can exist in a list. */
-	struct list_head node;
+    /* This structure can exist in a list. */
+    struct list_head node;
 };
 
 struct rp_action {
-	KeySym key;
-	unsigned int state;
-	char *data;	/* misc data to be passed to the function */
-	/* void (*func)(void *); */
+    KeySym key;
+    unsigned int state;
+    char *data;                 /* misc data to be passed to the function */
+    /* void (*func)(void *); */
 };
 
 struct rp_keymap {
-	char *name;
-	rp_action *actions;
-	int actions_last;
-	int actions_size;
+    char *name;
+    rp_action *actions;
+    int actions_last;
+    int actions_size;
 
-	/* This structure can be part of a list. */
-	struct list_head node;
+    /* This structure can be part of a list. */
+    struct list_head node;
 };
 
 struct rp_key {
-	KeySym sym;
-	unsigned int state;
+    KeySym sym;
+    unsigned int state;
 };
 
 struct rp_defaults {
-	/*
-	 * Default positions for new normal windows, transient windows, and
-	 * normal windows with maxsize hints.
-	 */
-	int win_gravity;
-	int trans_gravity;
-	int maxsize_gravity;
+    /*
+     * Default positions for new normal windows, transient windows, and
+     * normal windows with maxsize hints.
+     */
+    int win_gravity;
+    int trans_gravity;
+    int maxsize_gravity;
 
-	int input_window_size;
-	int window_border_width;
-	int only_border;
+    int input_window_size;
+    int window_border_width;
+    int only_border;
 
-	int bar_x_padding;
-	int bar_y_padding;
-	int bar_location;
-	int bar_timeout;
-	int bar_border_width;
-	int bar_in_padding;
+    int bar_x_padding;
+    int bar_y_padding;
+    int bar_location;
+    int bar_timeout;
+    int bar_border_width;
+    int bar_in_padding;
 
-	int frame_indicator_timeout;
-	int frame_resize_unit;
+    int frame_indicator_timeout;
+    int frame_resize_unit;
 
-	int padding_left;
-	int padding_right;
-	int padding_top;
-	int padding_bottom;
+    int padding_left;
+    int padding_right;
+    int padding_top;
+    int padding_bottom;
 
-	char *font_string;
+    char *font_string;
 
-	char *fgcolor_string;
-	char *bgcolor_string;
-	char *fwcolor_string;
-	char *bwcolor_string;
-	char *barbordercolor_string;
+    char *fgcolor_string;
+    char *bgcolor_string;
+    char *fwcolor_string;
+    char *bwcolor_string;
+    char *barbordercolor_string;
 
-	int wait_for_key_cursor;
+    int wait_for_key_cursor;
 
-	char *window_fmt;
-	char *info_fmt;
-	char *sticky_fmt;
-	char *resize_fmt;
+    char *window_fmt;
+    char *info_fmt;
+    char *sticky_fmt;
+    char *resize_fmt;
 
-	/* Which name to use: wm_name, res_name, res_class. */
-	int win_name;
+    /* Which name to use: wm_name, res_name, res_class. */
+    int win_name;
 
-	/*
-	 * Decides whether the window list is displayed in a row or a column.
-	 */
-	int window_list_style;
+    /*
+     * Decides whether the window list is displayed in a row or a column.
+     */
+    int window_list_style;
 
-	/* Pointer warping toggle. */
-	int warp;
+    /* Pointer warping toggle. */
+    int warp;
 
-	char *frame_selectors;
+    char *frame_selectors;
 
-	/* How many frame sets to remember when undoing. */
-	int maxundos;
+    /* How many frame sets to remember when undoing. */
+    int maxundos;
 
-	/* The name of the top level keymap */
-	char *top_kmap;
+    /* The name of the top level keymap */
+    char *top_kmap;
 
-	/* Frame indicator format */
-	char *frame_fmt;
+    /* Frame indicator format */
+    char *frame_fmt;
 
-	/* Number of virtual screens */
-	int vscreens;
+    /* Number of virtual screens */
+    int vscreens;
 
-	/* Window gap */
-	int gap;
+    /* Window gap */
+    int gap;
 
-	/* Whether to ignore window size hints */
-	int ignore_resize_hints;
+    /* Whether to ignore window size hints */
+    int ignore_resize_hints;
 
-	/* New mapped window always uses current vscreen */
-	int win_add_cur_vscreen;
+    /* New mapped window always uses current vscreen */
+    int win_add_cur_vscreen;
 };
 
 /* Information about a child process. */
 struct rp_child_info {
-	/* The command that was executed. */
-	char *cmd;
+    /* The command that was executed. */
+    char *cmd;
 
-	/* PID of the process. */
-	int pid;
+    /* PID of the process. */
+    int pid;
 
-	/* Return status when the child process finished. */
-	int status;
+    /* Return status when the child process finished. */
+    int status;
 
-	/* When this is != 0 then the process finished. */
-	int terminated;
+    /* When this is != 0 then the process finished. */
+    int terminated;
 
-	/* what was current when it was launched? */
-	rp_frame *frame;
-	rp_screen *screen;
-	rp_vscreen *vscreen;
+    /* what was current when it was launched? */
+    rp_frame *frame;
+    rp_screen *screen;
+    rp_vscreen *vscreen;
 
-	/*
-	 * Non-zero when the pid has mapped a window. This is to prevent every
-	 * window the program opens from getting mapped in the frame it was
-	 * launched from. Only the first window should do this.
-	 */
-	int window_mapped;
+    /*
+     * Non-zero when the pid has mapped a window. This is to prevent every
+     * window the program opens from getting mapped in the frame it was
+     * launched from. Only the first window should do this.
+     */
+    int window_mapped;
 
-	/* This structure can exist in a list. */
-	struct list_head node;
+    /* This structure can exist in a list. */
+    struct list_head node;
 };
 
 /*
@@ -401,18 +401,18 @@ struct rp_child_info {
 #define RP_HYPER_MASK   32
 
 struct modifier_info {
-	/* unsigned int mode_switch_mask; */
-	unsigned int meta_mod_mask;
-	unsigned int alt_mod_mask;
-	unsigned int super_mod_mask;
-	unsigned int hyper_mod_mask;
+    /* unsigned int mode_switch_mask; */
+    unsigned int meta_mod_mask;
+    unsigned int alt_mod_mask;
+    unsigned int super_mod_mask;
+    unsigned int hyper_mod_mask;
 
-	/*
-	 * Keep track of these because they mess up the grab and should be
-	 * ignored.
-	 */
-	unsigned int num_lock_mask;
-	unsigned int scroll_lock_mask;
+    /*
+     * Keep track of these because they mess up the grab and should be
+     * ignored.
+     */
+    unsigned int num_lock_mask;
+    unsigned int scroll_lock_mask;
 };
 
 typedef struct list_head *(*completion_fn) (char *string);
@@ -425,61 +425,61 @@ typedef struct list_head *(*completion_fn) (char *string);
   is ignored.
 */
 enum completion_styles {
-	BASIC,
-	SUBSTRING
+    BASIC,
+    SUBSTRING
 };
 
 struct rp_completions {
-	/*
-	 * A pointer to the partial string that is being completed. We need to
-	 * store this so that the user can cycle through all possible
-	 * completions.
-	 */
-	char *partial;
+    /*
+     * A pointer to the partial string that is being completed. We need to
+     * store this so that the user can cycle through all possible
+     * completions.
+     */
+    char *partial;
 
-	/*
-	 * A pointer to the string that was last matched string. Used to keep
-	 * track of where we are in the completion list.
-	 */
-	struct sbuf *last_match;
+    /*
+     * A pointer to the string that was last matched string. Used to keep
+     * track of where we are in the completion list.
+     */
+    struct sbuf *last_match;
 
-	/* A list of sbuf's which are possible completions. */
-	struct list_head completion_list;
+    /* A list of sbuf's which are possible completions. */
+    struct list_head completion_list;
 
-	/* The function that generates the completions. */
-	completion_fn complete_fn;
+    /* The function that generates the completions. */
+    completion_fn complete_fn;
 
-	/*
-	 * virgin = 1 means no completions have been attempted on the input
-	 * string.
-	 */
-	unsigned short int virgin;
+    /*
+     * virgin = 1 means no completions have been attempted on the input
+     * string.
+     */
+    unsigned short int virgin;
 
-	/* The completion style used to perform string comparisons */
-	enum completion_styles style;
+    /* The completion style used to perform string comparisons */
+    enum completion_styles style;
 };
 
 struct rp_input_line {
-	char *buffer;
-	char *prompt;
-	char *saved;
-	size_t position;
-	size_t length;
-	size_t size;
-	rp_completions *compl;
-	Atom selection;
+    char *buffer;
+    char *prompt;
+    char *saved;
+    size_t position;
+    size_t length;
+    size_t size;
+    rp_completions *compl;
+    Atom selection;
 };
 
 /* The hook dictionary. */
 struct rp_hook_db_entry {
-	char *name;
-	struct list_head *hook;
+    char *name;
+    struct list_head *hook;
 };
 
 typedef struct rp_xselection rp_xselection;
 struct rp_xselection {
-	char *text;
-	int len;
+    char *text;
+    int len;
 };
 
-#endif	/* _POISON_DATA_H */
+#endif                          /* _POISON_DATA_H */

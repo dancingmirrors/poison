@@ -119,142 +119,138 @@ struct numset *rp_frame_numset;
 /* The X11 selection globals */
 rp_xselection selection;
 
-static void
-x_export_selection(void)
+static void x_export_selection(void)
 {
-	rp_screen *screen;
+    rp_screen *screen;
 
-	list_first(screen, &rp_screens, node);
-	if (!screen)
-		return;
+    list_first(screen, &rp_screens, node);
+    if (!screen)
+        return;
 
-	/* Hang the selections off screen 0's key window. */
-	XSetSelectionOwner(dpy, XA_PRIMARY, screen->key_window, CurrentTime);
-	if (XGetSelectionOwner(dpy, XA_PRIMARY) != screen->key_window)
-		warnx("can't get primary selection");
-	XChangeProperty(dpy, screen->root, XA_CUT_BUFFER0, xa_string, 8,
-	    PropModeReplace, (unsigned char *) selection.text, selection.len);
+    /* Hang the selections off screen 0's key window. */
+    XSetSelectionOwner(dpy, XA_PRIMARY, screen->key_window, CurrentTime);
+    if (XGetSelectionOwner(dpy, XA_PRIMARY) != screen->key_window)
+        warnx("can't get primary selection");
+    XChangeProperty(dpy, screen->root, XA_CUT_BUFFER0, xa_string, 8,
+                    PropModeReplace, (unsigned char *) selection.text,
+                    selection.len);
 }
 
-void
-set_nselection(char *txt, int len)
+void set_nselection(char *txt, int len)
 {
-	int i;
+    int i;
 
-	/* Update the selection structure */
-	free(selection.text);
+    /* Update the selection structure */
+    free(selection.text);
 
-	/* Copy the string by hand. */
-	selection.text = xmalloc(len + 1);
-	selection.len = len + 1;
-	for (i = 0; i < len; i++)
-		selection.text[i] = txt[i];
-	selection.text[len] = 0;
+    /* Copy the string by hand. */
+    selection.text = xmalloc(len + 1);
+    selection.len = len + 1;
+    for (i = 0; i < len; i++)
+        selection.text[i] = txt[i];
+    selection.text[len] = 0;
 
-	x_export_selection();
+    x_export_selection();
 }
 
-void
-set_selection(char *txt)
+void set_selection(char *txt)
 {
-	/* Update the selection structure */
-	free(selection.text);
-	selection.text = xstrdup(txt);
-	selection.len = strlen(txt);
+    /* Update the selection structure */
+    free(selection.text);
+    selection.text = xstrdup(txt);
+    selection.len = strlen(txt);
 
-	x_export_selection();
+    x_export_selection();
 }
 
-static char *
-get_cut_buffer(void)
+static char *get_cut_buffer(void)
 {
-	int nbytes;
-	char *data;
+    int nbytes;
+    char *data;
 
-	PRINT_DEBUG(("trying the cut buffer\n"));
+    PRINT_DEBUG(("trying the cut buffer\n"));
 
-	data = XFetchBytes(dpy, &nbytes);
+    data = XFetchBytes(dpy, &nbytes);
 
-	if (data) {
-		struct sbuf *s = sbuf_new(0);
-		sbuf_nconcat(s, data, nbytes);
-		XFree(data);
-		return sbuf_free_struct(s);
-	} else
-		return NULL;
+    if (data) {
+        struct sbuf *s = sbuf_new(0);
+        sbuf_nconcat(s, data, nbytes);
+        XFree(data);
+        return sbuf_free_struct(s);
+    } else
+        return NULL;
 }
 
 /* Lifted the code from rxvt. */
-static char *
-get_primary_selection(void)
+static char *get_primary_selection(void)
 {
-	long nread;
-	unsigned long bytes_after;
-	XTextProperty ct;
-	struct sbuf *s = sbuf_new(0);
+    long nread;
+    unsigned long bytes_after;
+    XTextProperty ct;
+    struct sbuf *s = sbuf_new(0);
 
-	for (nread = 0, bytes_after = 1; bytes_after > 0; nread += ct.nitems) {
-		if ((XGetWindowProperty(dpy, rp_current_screen->input_window,
-		    rp_selection, (nread / 4), 4096, True, AnyPropertyType,
-		    &ct.encoding, &ct.format, &ct.nitems, &bytes_after,
-		    &ct.value) != Success)) {
-			XFree(ct.value);
-			sbuf_free(s);
-			return NULL;
-		}
-		if (ct.value == NULL)
-			continue;
-		/*
-		 * Accumulate the data. FIXME: ct.value may not be NULL
-		 * terminated.
-		 */
-		sbuf_nconcat(s, (const char *) ct.value, ct.nitems);
-		XFree(ct.value);
-	}
-	return sbuf_free_struct(s);
+    for (nread = 0, bytes_after = 1; bytes_after > 0; nread += ct.nitems) {
+        if ((XGetWindowProperty(dpy, rp_current_screen->input_window,
+                                rp_selection, (nread / 4), 4096, True,
+                                AnyPropertyType, &ct.encoding, &ct.format,
+                                &ct.nitems, &bytes_after,
+                                &ct.value) != Success)) {
+            XFree(ct.value);
+            sbuf_free(s);
+            return NULL;
+        }
+        if (ct.value == NULL)
+            continue;
+        /*
+         * Accumulate the data. FIXME: ct.value may not be NULL
+         * terminated.
+         */
+        sbuf_nconcat(s, (const char *) ct.value, ct.nitems);
+        XFree(ct.value);
+    }
+    return sbuf_free_struct(s);
 }
 
-char *
-get_selection(void)
+char *get_selection(void)
 {
-	Atom property;
-	XEvent ev;
-	rp_screen *s = rp_current_screen;
-	int loops = 1000;
+    Atom property;
+    XEvent ev;
+    rp_screen *s = rp_current_screen;
+    int loops = 1000;
 
-	/* Just insert our text, if we own the selection. */
-	if (selection.text) {
-		return xstrdup(selection.text);
-	} else {
-		/* be a good icccm citizen */
-		XDeleteProperty(dpy, s->input_window, rp_selection);
-		/*
-		 * TODO: we shouldn't use CurrentTime here, use the time of the
-		 * XKeyEvent, should we fake it?
-		 */
-		XConvertSelection(dpy, XA_PRIMARY, xa_string, rp_selection,
-		    s->input_window, CurrentTime);
+    /* Just insert our text, if we own the selection. */
+    if (selection.text) {
+        return xstrdup(selection.text);
+    } else {
+        /* be a good icccm citizen */
+        XDeleteProperty(dpy, s->input_window, rp_selection);
+        /*
+         * TODO: we shouldn't use CurrentTime here, use the time of the
+         * XKeyEvent, should we fake it?
+         */
+        XConvertSelection(dpy, XA_PRIMARY, xa_string, rp_selection,
+                          s->input_window, CurrentTime);
 
-		/* This seems like a hack. */
-		while (!XCheckTypedWindowEvent(dpy, s->input_window,
-		    SelectionNotify, &ev)) {
-			if (loops == 0) {
-				warnx("selection request timed out");
-				return NULL;
-			}
-			usleep(10000);
-			loops--;
-		}
+        /* This seems like a hack. */
+        while (!XCheckTypedWindowEvent(dpy, s->input_window,
+                                       SelectionNotify, &ev)) {
+            if (loops == 0) {
+                warnx("selection request timed out");
+                return NULL;
+            }
+            usleep(10000);
+            loops--;
+        }
 
-		PRINT_DEBUG(("SelectionNotify event\n"));
+        PRINT_DEBUG(("SelectionNotify event\n"));
 
-		property = ev.xselection.property;
+        property = ev.xselection.property;
 
-		if (property != None)
-			return get_primary_selection();
-		else
-			return get_cut_buffer();
-	}
+        if (property != None)
+            return get_primary_selection();
+        else
+            return get_cut_buffer();
+    }
 }
 
 /* The hook dictionary globals. */
@@ -270,466 +266,450 @@ LIST_HEAD(rp_delete_window_hook);
 LIST_HEAD(rp_new_window_hook);
 LIST_HEAD(rp_title_changed_hook);
 
-struct rp_hook_db_entry rp_hook_db[] =
-	{{"key", &rp_key_hook},
-	{"switchwin", &rp_switch_win_hook},
-	{"switchframe", &rp_switch_frame_hook},
-	{"switchscreen", &rp_switch_screen_hook},
-	{"switchvscreen", &rp_switch_vscreen_hook},
-	{"deletewindow", &rp_delete_window_hook},
-	{"quit", &rp_quit_hook},
-	{"restart", &rp_restart_hook},
-	{"newwindow", &rp_new_window_hook},
-	{"titlechanged", &rp_title_changed_hook},
-	{NULL, NULL}
+struct rp_hook_db_entry rp_hook_db[] = { { "key", &rp_key_hook },
+{ "switchwin", &rp_switch_win_hook },
+{ "switchframe", &rp_switch_frame_hook },
+{ "switchscreen", &rp_switch_screen_hook },
+{ "switchvscreen", &rp_switch_vscreen_hook },
+{ "deletewindow", &rp_delete_window_hook },
+{ "quit", &rp_quit_hook },
+{ "restart", &rp_restart_hook },
+{ "newwindow", &rp_new_window_hook },
+{ "titlechanged", &rp_title_changed_hook },
+{ NULL, NULL }
 };
 
-void
-set_rp_window_focus(rp_window *win)
+void set_rp_window_focus(rp_window *win)
 {
-	XEvent ev;
+    XEvent ev;
 
-	PRINT_DEBUG(("Giving focus to '%s' (accepts_input: %d, supports_wm_take_focus: %d)\n",
-	    window_name(win), win->accepts_input, win->supports_wm_take_focus));
+    PRINT_DEBUG(("Giving focus to '%s' (accepts_input: %d, supports_wm_take_focus: %d)\n", window_name(win), win->accepts_input, win->supports_wm_take_focus));
 
-	/*
-	 * Update both input hint and protocols in case they changed since the
-	 * last check.
-	 */
-	update_window_input_hint(win);
-	update_window_protocols(win);
+    /*
+     * Update both input hint and protocols in case they changed since the
+     * last check.
+     */
+    update_window_input_hint(win);
+    update_window_protocols(win);
 
-	/*
-	 * Set input focus according to the ICCCM input model:
-	 * - Passive/Locally Active: InputHint=True -> set focus
-	 * - Globally Active: InputHint=False + WM_TAKE_FOCUS -> set focus anyway
-	 * - No Input: InputHint=False, no WM_TAKE_FOCUS -> don't set focus
-	 */
-	if (win->accepts_input || win->supports_wm_take_focus) {
-		XSetInputFocus(dpy, win->w,
-		    RevertToPointerRoot, CurrentTime);
-		/* Force sync to ensure focus change takes effect */
-		XSync(dpy, False);
-	}
+    /*
+     * Set input focus according to the ICCCM input model:
+     * - Passive/Locally Active: InputHint=True -> set focus
+     * - Globally Active: InputHint=False + WM_TAKE_FOCUS -> set focus anyway
+     * - No Input: InputHint=False, no WM_TAKE_FOCUS -> don't set focus
+     */
+    if (win->accepts_input || win->supports_wm_take_focus) {
+        XSetInputFocus(dpy, win->w, RevertToPointerRoot, CurrentTime);
+        /* Force sync to ensure focus change takes effect */
+        XSync(dpy, False);
+    }
 
-	/* Send WM_TAKE_FOCUS message if the window supports it. */
-	if (win->supports_wm_take_focus) {
-		ev.xclient.type = ClientMessage;
-		ev.xclient.window = win->w;
-		ev.xclient.message_type = wm_protocols;
-		ev.xclient.format = 32;
-		ev.xclient.data.l[0] = wm_take_focus;
-		ev.xclient.data.l[1] = CurrentTime;
+    /* Send WM_TAKE_FOCUS message if the window supports it. */
+    if (win->supports_wm_take_focus) {
+        ev.xclient.type = ClientMessage;
+        ev.xclient.window = win->w;
+        ev.xclient.message_type = wm_protocols;
+        ev.xclient.format = 32;
+        ev.xclient.data.l[0] = wm_take_focus;
+        ev.xclient.data.l[1] = CurrentTime;
 
-		XSendEvent(dpy, win->w, False, 0, &ev);
-		XSync(dpy, False);
-		PRINT_DEBUG(("Sent WM_TAKE_FOCUS to '%s'\n", window_name(win)));
-	}
+        XSendEvent(dpy, win->w, False, 0, &ev);
+        XSync(dpy, False);
+        PRINT_DEBUG(("Sent WM_TAKE_FOCUS to '%s'\n", window_name(win)));
+    }
 
-	/* Allow events to ensure passive grabs work properly. */
-	XAllowEvents(dpy, AsyncBoth, CurrentTime);
-	XSync(dpy, False);
+    /* Allow events to ensure passive grabs work properly. */
+    XAllowEvents(dpy, AsyncBoth, CurrentTime);
+    XSync(dpy, False);
 
-	set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
-	    &win->w, 1);
+    set_atom(win->vscreen->screen->root, _net_active_window, XA_WINDOW,
+             &win->w, 1);
+}
+
+void set_window_focus(Window window)
+{
+    PRINT_DEBUG(("Giving focus to %ld\n", window));
+    XSetInputFocus(dpy, window, RevertToPointerRoot, CurrentTime);
+}
+
+XftFont *rp_get_font(rp_screen *s, char *font)
+{
+    XftFont *f;
+    int fslots = sizeof(s->xft_font_cache) / sizeof(struct rp_font);
+    int x;
+
+    if (!font || font[0] == '\0')
+        return s->xft_font;
+
+    for (x = 0; x < fslots; x++) {
+        if (!s->xft_font_cache[x].name)
+            break;
+
+        if (strcmp(s->xft_font_cache[x].name, font) == 0)
+            return s->xft_font_cache[x].font;
+    }
+
+    /* not in the cache, make sure we can open it first */
+    f = XftFontOpenName(dpy, DefaultScreen(dpy), font);
+    if (!f) {
+        warnx("failed opening xft font \"%s\"", font);
+        return s->xft_font;
+    }
+
+    PRINT_DEBUG(("font \"%s\" not in font cache\n", font));
+
+    /* free up the last slot if needed */
+    if (x == fslots) {
+        free(s->xft_font_cache[x - 1].name);
+        XftFontClose(dpy, s->xft_font_cache[x - 1].font);
+    }
+
+    /* shift all the cache entries to free up the first slot */
+    for (x = fslots - 1; x >= 1; x--)
+        memcpy(&s->xft_font_cache[x], &s->xft_font_cache[x - 1],
+               sizeof(struct rp_font));
+
+    s->xft_font_cache[0].name = xstrdup(font);
+    s->xft_font_cache[0].font = f;
+
+    return f;
+}
+
+void rp_clear_cached_fonts(rp_screen *s)
+{
+    size_t x;
+
+    for (x = 0; x < (sizeof(s->xft_font_cache) / sizeof(struct rp_font));
+         x++) {
+        if (s->xft_font_cache[x].name) {
+            free(s->xft_font_cache[x - 1].name);
+            XftFontClose(dpy, s->xft_font_cache[x].font);
+        }
+    }
 }
 
 void
-set_window_focus(Window window)
+rp_draw_string(rp_screen *s, Drawable d, int style, int x, int y,
+               char *string, int length, char *font, char *color)
 {
-	PRINT_DEBUG(("Giving focus to %ld\n", window));
-	XSetInputFocus(dpy, window,
-	    RevertToPointerRoot, CurrentTime);
+    XftDraw *draw;
+    XftColor xftcolor;
+    XftFont *f = rp_get_font(s, font);
+
+    if (length < 0)
+        length = strlen(string);
+
+    draw = XftDrawCreate(dpy, d, DefaultVisual(dpy, s->screen_num),
+                         DefaultColormap(dpy, s->screen_num));
+    if (!draw) {
+        warnx("no Xft font available");
+        return;
+    }
+
+    if (color == NULL) {
+        if (style == STYLE_NORMAL)
+            memcpy(&xftcolor, &s->xft_fgcolor, sizeof(XftColor));
+        else
+            memcpy(&xftcolor, &s->xft_bgcolor, sizeof(XftColor));
+    } else {
+        /*
+         * This won't actually allocate anything if the color is
+         * already allocated.
+         */
+        if (!XftColorAllocName(dpy, DefaultVisual(dpy, s->screen_num),
+                               DefaultColormap(dpy, s->screen_num), color,
+                               &xftcolor)) {
+            warnx("couldn't XftColorAllocName \"%s\"", color);
+            memcpy(&xftcolor, &s->xft_fgcolor, sizeof(XftColor));
+        }
+    }
+
+    XftDrawStringUtf8(draw, &xftcolor, f, x, y, (FcChar8 *) string,
+                      length);
+    XftDrawDestroy(draw);
 }
 
-XftFont *
-rp_get_font(rp_screen *s, char *font)
+int rp_text_width(rp_screen *s, char *string, int count, char *font)
 {
-	XftFont *f;
-	int fslots = sizeof(s->xft_font_cache) / sizeof(struct rp_font);
-	int x;
+    XGlyphInfo extents;
+    XftFont *f = rp_get_font(s, font);
 
-	if (!font || font[0] == '\0')
-		return s->xft_font;
+    if (count < 0)
+        count = strlen(string);
 
-	for (x = 0; x < fslots; x++) {
-		if (!s->xft_font_cache[x].name)
-			break;
+    XftTextExtentsUtf8(dpy, f, (FcChar8 *) string, count, &extents);
 
-		if (strcmp(s->xft_font_cache[x].name, font) == 0)
-			return s->xft_font_cache[x].font;
-	}
-
-	/* not in the cache, make sure we can open it first */
-	f = XftFontOpenName(dpy, DefaultScreen(dpy), font);
-	if (!f) {
-		warnx("failed opening xft font \"%s\"", font);
-		return s->xft_font;
-	}
-
-	PRINT_DEBUG(("font \"%s\" not in font cache\n", font));
-
-	/* free up the last slot if needed */
-	if (x == fslots) {
-		free(s->xft_font_cache[x - 1].name);
-		XftFontClose(dpy, s->xft_font_cache[x - 1].font);
-	}
-
-	/* shift all the cache entries to free up the first slot */
-	for (x = fslots - 1; x >= 1; x--)
-		memcpy(&s->xft_font_cache[x], &s->xft_font_cache[x - 1],
-		    sizeof(struct rp_font));
-
-	s->xft_font_cache[0].name = xstrdup(font);
-	s->xft_font_cache[0].font = f;
-
-	return f;
-}
-
-void
-rp_clear_cached_fonts(rp_screen *s)
-{
-	size_t x;
-
-	for (x = 0; x < (sizeof(s->xft_font_cache) / sizeof(struct rp_font));
-	    x++) {
-		if (s->xft_font_cache[x].name) {
-			free(s->xft_font_cache[x - 1].name);
-			XftFontClose(dpy, s->xft_font_cache[x].font);
-		}
-	}
-}
-
-void
-rp_draw_string(rp_screen *s, Drawable d, int style, int x, int y, char *string,
-    int length, char *font, char *color)
-{
-	XftDraw *draw;
-	XftColor xftcolor;
-	XftFont *f = rp_get_font(s, font);
-
-	if (length < 0)
-		length = strlen(string);
-
-	draw = XftDrawCreate(dpy, d, DefaultVisual(dpy, s->screen_num),
-	    DefaultColormap(dpy, s->screen_num));
-	if (!draw) {
-		warnx("no Xft font available");
-		return;
-	}
-
-	if (color == NULL) {
-		if (style == STYLE_NORMAL)
-			memcpy(&xftcolor, &s->xft_fgcolor, sizeof(XftColor));
-		else
-			memcpy(&xftcolor, &s->xft_bgcolor, sizeof(XftColor));
-	} else {
-		/*
-		 * This won't actually allocate anything if the color is
-		 * already allocated.
-		 */
-		if (!XftColorAllocName(dpy, DefaultVisual(dpy, s->screen_num),
-		    DefaultColormap(dpy, s->screen_num), color, &xftcolor)) {
-			warnx("couldn't XftColorAllocName \"%s\"", color);
-			memcpy(&xftcolor, &s->xft_fgcolor, sizeof(XftColor));
-		}
-	}
-
-	XftDrawStringUtf8(draw, &xftcolor, f, x, y, (FcChar8 *)string, length);
-	XftDrawDestroy(draw);
-}
-
-int
-rp_text_width(rp_screen *s, char *string, int count, char *font)
-{
-	XGlyphInfo extents;
-	XftFont *f = rp_get_font(s, font);
-
-	if (count < 0)
-		count = strlen(string);
-
-	XftTextExtentsUtf8(dpy, f, (FcChar8 *)string, count, &extents);
-
-	return extents.xOff;
+    return extents.xOff;
 }
 
 /* A case insensitive strncmp. */
-int
-str_comp(char *s1, char *s2, size_t len)
+int str_comp(char *s1, char *s2, size_t len)
 {
-	size_t i;
+    size_t i;
 
-	for (i = 0; i < len; i++)
-		if (toupper((unsigned char)s1[i]) != toupper((unsigned char)s2[i]))
-			return 0;
+    for (i = 0; i < len; i++)
+        if (toupper((unsigned char) s1[i]) !=
+            toupper((unsigned char) s2[i]))
+            return 0;
 
-	return 1;
+    return 1;
 }
 
 /*
  * Check for child processes that have quit but haven't been acknowledged yet.
  * Update their structure.
  */
-void
-check_child_procs(void)
+void check_child_procs(void)
 {
-	rp_child_info *cur;
-	int pid, status;
-	while (1) {
-		pid = waitpid(WAIT_ANY, &status, WNOHANG);
-		if (pid <= 0)
-			break;
+    rp_child_info *cur;
+    int pid, status;
+    while (1) {
+        pid = waitpid(WAIT_ANY, &status, WNOHANG);
+        if (pid <= 0)
+            break;
 
-		PRINT_DEBUG(("Child status: %d\n", WEXITSTATUS(status)));
+        PRINT_DEBUG(("Child status: %d\n", WEXITSTATUS(status)));
 
-		/* Find the child and update its structure. */
-		list_for_each_entry(cur, &rp_children, node) {
-			if (cur->pid == pid) {
-				cur->terminated = 1;
-				cur->status = WEXITSTATUS(status);
-				break;
-			}
-		}
+        /* Find the child and update its structure. */
+        list_for_each_entry(cur, &rp_children, node) {
+            if (cur->pid == pid) {
+                cur->terminated = 1;
+                cur->status = WEXITSTATUS(status);
+                break;
+            }
+        }
 
-		chld_signalled = 1;
-	}
+        chld_signalled = 1;
+    }
 }
 
-void
-chld_handler(int signum)
+void chld_handler(int signum)
 {
-	int serrno;
+    int serrno;
 
-	serrno = errno;
-	check_child_procs();
-	errno = serrno;
+    serrno = errno;
+    check_child_procs();
+    errno = serrno;
 }
 
-void
-set_sig_handler(int sig, void (*action)(int))
+void set_sig_handler(int sig, void (*action)(int))
 {
-	struct sigaction act;
+    struct sigaction act;
 
-	memset(&act, 0, sizeof(act));
-	act.sa_handler = action;
-	sigemptyset(&act.sa_mask);
-	if (sigaction(sig, &act, NULL))
-		warnx("error setting signal handler");
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = action;
+    sigemptyset(&act.sa_mask);
+    if (sigaction(sig, &act, NULL))
+        warnx("error setting signal handler");
 }
 
-void
-set_close_on_exec(int fd)
+void set_close_on_exec(int fd)
 {
-	int flags = fcntl(fd, F_GETFD);
-	if (flags >= 0)
-		fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+    int flags = fcntl(fd, F_GETFD);
+    if (flags >= 0)
+        fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
 }
 
-void
-read_rc_file(FILE *file)
+void read_rc_file(FILE *file)
 {
-	char *line;
-	size_t linesize = 256;
+    char *line;
+    size_t linesize = 256;
 
-	line = xmalloc(linesize);
+    line = xmalloc(linesize);
 
-	while (getline(&line, &linesize, file) != -1) {
-		line[strcspn(line, "\n")] = '\0';
+    while (getline(&line, &linesize, file) != -1) {
+        line[strcspn(line, "\n")] = '\0';
 
-		PRINT_DEBUG(("rcfile line: %s\n", line));
+        PRINT_DEBUG(("rcfile line: %s\n", line));
 
-		if (*line != '\0' && *line != '#') {
-			cmdret *result;
-			result = command(0, line);
+        if (*line != '\0' && *line != '#') {
+            cmdret *result;
+            result = command(0, line);
 
-			/* Gobble the result. */
-			if (result)
-				cmdret_free(result);
-		}
-	}
+            /* Gobble the result. */
+            if (result)
+                cmdret_free(result);
+        }
+    }
 
-	free(line);
+    free(line);
 }
 
-const char *
-get_homedir(void)
+const char *get_homedir(void)
 {
-	char *homedir;
+    char *homedir;
 
-	homedir = getenv("HOME");
-	if (homedir != NULL && homedir[0] == '\0')
-		homedir = NULL;
+    homedir = getenv("HOME");
+    if (homedir != NULL && homedir[0] == '\0')
+        homedir = NULL;
 
-	if (homedir == NULL) {
-		struct passwd *pw;
+    if (homedir == NULL) {
+        struct passwd *pw;
 
-		pw = getpwuid(getuid());
-		if (pw != NULL)
-			homedir = pw->pw_dir;
+        pw = getpwuid(getuid());
+        if (pw != NULL)
+            homedir = pw->pw_dir;
 
-		if (homedir != NULL && homedir[0] == '\0')
-			homedir = NULL;
-	}
+        if (homedir != NULL && homedir[0] == '\0')
+            homedir = NULL;
+    }
 
-	return homedir;
+    return homedir;
 }
 
-char *
-get_config_dir(void)
+char *get_config_dir(void)
 {
-	DIR *d;
-	const char *homedir;
-	char *xdg_config, *home_config;
-	int xdg_alloc = 0;
+    DIR *d;
+    const char *homedir;
+    char *xdg_config, *home_config;
+    int xdg_alloc = 0;
 
-	homedir = get_homedir();
-	if (!homedir)
-		errx(1, "no home directory");
+    homedir = get_homedir();
+    if (!homedir)
+        errx(1, "no home directory");
 
-	xdg_config = getenv("XDG_CONFIG_HOME");
-	if (xdg_config == NULL || !strlen(xdg_config)) {
-		xdg_config = xsprintf("%s/.config", homedir);
-		xdg_alloc = 1;
-	}
+    xdg_config = getenv("XDG_CONFIG_HOME");
+    if (xdg_config == NULL || !strlen(xdg_config)) {
+        xdg_config = xsprintf("%s/.config", homedir);
+        xdg_alloc = 1;
+    }
 
-	if (!(d = opendir(xdg_config))) {
-		if (mkdir(xdg_config, 0755) == -1)
-			err(1, "failed creating %s", xdg_config);
+    if (!(d = opendir(xdg_config))) {
+        if (mkdir(xdg_config, 0755) == -1)
+            err(1, "failed creating %s", xdg_config);
 
-		if (!(d = opendir(xdg_config)))
-			err(1, "failed opening %s", xdg_config);
-	}
-	closedir(d);
+        if (!(d = opendir(xdg_config)))
+            err(1, "failed opening %s", xdg_config);
+    }
+    closedir(d);
 
-	home_config = xsprintf("%s/poison", xdg_config);
-	if (!(d = opendir(home_config))) {
-		if (mkdir(home_config, 0755) == -1)
-			err(1, "failed creating %s", home_config);
+    home_config = xsprintf("%s/poison", xdg_config);
+    if (!(d = opendir(home_config))) {
+        if (mkdir(home_config, 0755) == -1)
+            err(1, "failed creating %s", home_config);
 
-		if (!(d = opendir(home_config)))
-			err(1, "failed opening %s", home_config);
-	}
-	closedir(d);
+        if (!(d = opendir(home_config)))
+            err(1, "failed opening %s", home_config);
+    }
+    closedir(d);
 
-	if (xdg_alloc)
-		free(xdg_config);
+    if (xdg_alloc)
+        free(xdg_config);
 
-	return home_config;
+    return home_config;
 }
 
-void
-clean_up(void)
+void clean_up(void)
 {
-	rp_screen *cur;
-	rp_vscreen *vcur;
-	struct list_head *iter, *tmp, *iter2, *tmp2;
+    rp_screen *cur;
+    rp_vscreen *vcur;
+    struct list_head *iter, *tmp, *iter2, *tmp2;
 
-	free_keymaps();
-	free_aliases();
-	free_user_commands();
-	free_bar();
-	free_window_stuff();
+    free_keymaps();
+    free_aliases();
+    free_user_commands();
+    free_bar();
+    free_window_stuff();
 
-	list_for_each_safe_entry(cur, iter, tmp, &rp_screens, node) {
-		list_for_each_safe_entry(vcur, iter2, tmp2, &cur->vscreens, node)
-			vscreen_del(vcur);
+    list_for_each_safe_entry(cur, iter, tmp, &rp_screens, node) {
+        list_for_each_safe_entry(vcur, iter2, tmp2, &cur->vscreens, node)
+            vscreen_del(vcur);
 
-		list_del(&cur->node);
-		screen_free(cur);
-		free(cur);
-	}
+        list_del(&cur->node);
+        screen_free(cur);
+        free(cur);
+    }
 
-	screen_free_final();
+    screen_free_final();
 
-	/* Delete the undo histories */
-	clear_frame_undos();
+    /* Delete the undo histories */
+    clear_frame_undos();
 
-	/* Free the global frame numset shared by all screens. */
-	numset_free(rp_frame_numset);
+    /* Free the global frame numset shared by all screens. */
+    numset_free(rp_frame_numset);
 
-	free(defaults.window_fmt);
+    free(defaults.window_fmt);
 
-	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
-	XCloseDisplay(dpy);
+    XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
+    XCloseDisplay(dpy);
 }
 
-void
-register_atom(Atom *a, char *name)
+void register_atom(Atom *a, char *name)
 {
-	*a = XInternAtom(dpy, name, False);
-	PRINT_DEBUG(("Registered Atom %ld = %s\n", (unsigned long)*a, name));
-	append_atom(DefaultRootWindow(dpy), _net_supported, XA_ATOM, a, 1);
+    *a = XInternAtom(dpy, name, False);
+    PRINT_DEBUG(("Registered Atom %ld = %s\n", (unsigned long) *a, name));
+    append_atom(DefaultRootWindow(dpy), _net_supported, XA_ATOM, a, 1);
 }
 
 int
-set_atom(Window w, Atom a, Atom type, unsigned long *val, unsigned long nitems)
+set_atom(Window w, Atom a, Atom type, unsigned long *val,
+         unsigned long nitems)
 {
-	return (XChangeProperty(dpy, w, a, type, 32, PropModeReplace,
-	    (unsigned char *)val, nitems) == Success);
+    return (XChangeProperty(dpy, w, a, type, 32, PropModeReplace,
+                            (unsigned char *) val, nitems) == Success);
 }
 
 int
 append_atom(Window w, Atom a, Atom type, unsigned long *val,
-    unsigned long nitems)
+            unsigned long nitems)
 {
-	return (XChangeProperty(dpy, w, a, type, 32, PropModeAppend,
-	    (unsigned char *)val, nitems) == Success);
+    return (XChangeProperty(dpy, w, a, type, 32, PropModeAppend,
+                            (unsigned char *) val, nitems) == Success);
 }
 
 unsigned long
-get_atom(Window w, Atom a, Atom type, unsigned long off, unsigned long *ret,
-    unsigned long nitems, unsigned long *left)
+get_atom(Window w, Atom a, Atom type, unsigned long off,
+         unsigned long *ret, unsigned long nitems, unsigned long *left)
 {
-	Atom real_type;
-	int real_format = 0;
-	unsigned long i, items_read = 0;
-	unsigned long bytes_left = 0;
-	unsigned long *p;
-	unsigned char *data;
+    Atom real_type;
+    int real_format = 0;
+    unsigned long i, items_read = 0;
+    unsigned long bytes_left = 0;
+    unsigned long *p;
+    unsigned char *data;
 
-	XGetWindowProperty(dpy, w, a, off, nitems, False, type, &real_type,
-	    &real_format, &items_read, &bytes_left, &data);
+    XGetWindowProperty(dpy, w, a, off, nitems, False, type, &real_type,
+                       &real_format, &items_read, &bytes_left, &data);
 
-	if (real_format == 32 && items_read) {
-		p = (unsigned long *)data;
-		for (i = 0; i < items_read; i++)
-			*ret++ = *p++;
-		XFree(data);
-		if (left)
-			*left = bytes_left;
-		return items_read;
-	}
+    if (real_format == 32 && items_read) {
+        p = (unsigned long *) data;
+        for (i = 0; i < items_read; i++)
+            *ret++ = *p++;
+        XFree(data);
+        if (left)
+            *left = bytes_left;
+        return items_read;
+    }
 
-	return 0;
+    return 0;
 }
 
-void
-remove_atom(Window w, Atom a, Atom type, unsigned long remove)
+void remove_atom(Window w, Atom a, Atom type, unsigned long remove)
 {
-	unsigned long tmp, read, left, *new;
-	int i, j = 0;
+    unsigned long tmp, read, left, *new;
+    int i, j = 0;
 
-	read = get_atom(w, a, type, 0, &tmp, 1, &left);
-	if (!read)
-		return;
+    read = get_atom(w, a, type, 0, &tmp, 1, &left);
+    if (!read)
+        return;
 
-	new = malloc((read + left) * sizeof(*new));
-	if (read && tmp != remove)
-		new[j++] = tmp;
+    new = malloc((read + left) * sizeof(*new));
+    if (read && tmp != remove)
+        new[j++] = tmp;
 
-	for (i = 1, read = left = 1; read && left; i += read) {
-		read = get_atom(w, a, type, i, &tmp, 1, &left);
-		if (!read)
-			break;
-		if (tmp != remove)
-			new[j++] = tmp;
-	}
+    for (i = 1, read = left = 1; read && left; i += read) {
+        read = get_atom(w, a, type, i, &tmp, 1, &left);
+        if (!read)
+            break;
+        if (tmp != remove)
+            new[j++] = tmp;
+    }
 
-	if (j)
-		XChangeProperty(dpy, w, a, type, 32, PropModeReplace,
-		    (unsigned char *)new, j);
-	else
-		XDeleteProperty(dpy, w, a);
+    if (j)
+        XChangeProperty(dpy, w, a, type, 32, PropModeReplace,
+                        (unsigned char *) new, j);
+    else
+        XDeleteProperty(dpy, w, a);
 
-	free(new);
+    free(new);
 }

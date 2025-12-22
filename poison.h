@@ -50,7 +50,7 @@ do {                                            \
 } while (0)
 #else
 #define PRINT_DEBUG(fmt) do {} while (0)
-#endif	/* DEBUG */
+#endif                          /* DEBUG */
 
 #ifdef SENDCMD_DEBUG
 #define WARNX_DEBUG(fmt, ...)                   \
@@ -60,7 +60,7 @@ do {                                            \
 } while (0)
 #else
 #define WARNX_DEBUG(fmt, ...) do {} while (0)
-#endif	/* SENDCMD_DEBUG */
+#endif                          /* SENDCMD_DEBUG */
 
 #ifdef INPUT_DEBUG
 #define PRINT_INPUT_DEBUG(fmt)                  \
@@ -71,7 +71,7 @@ do {                                            \
 } while (0)
 #else
 #define PRINT_INPUT_DEBUG(fmt) do {} while (0)
-#endif	/* INPUT_DEBUG */
+#endif                          /* INPUT_DEBUG */
 
 #include "config.h"
 
@@ -98,4 +98,4 @@ do {                                            \
 #include "utf8.h"
 #include "util.h"
 
-#endif	/* ! _POISON_H */
+#endif                          /* ! _POISON_H */

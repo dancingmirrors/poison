@@ -117,4 +117,4 @@
 /* The default font */
 #define DEFAULT_XFT_FONT "monospace:size=12"
 
-#endif	/* !_ _POISON_CONF_H */
+#endif                          /* !_ _POISON_CONF_H */

@@ -24,26 +24,27 @@
 
 /* The structure returned by a command. */
 typedef struct cmdret {
-	char *output;
-	int success;
+    char *output;
+    int success;
 } cmdret;
 
 void clear_frame_undos(void);
-cmdret *frestore(char *data, rp_vscreen *v);
-char *fdump(rp_vscreen *vscreen);
+cmdret *frestore(char *data, rp_vscreen * v);
+char *fdump(rp_vscreen * vscreen);
 rp_keymap *find_keymap(char *name);
 void init_user_commands(void);
 void initialize_default_keybindings(void);
 cmdret *command(int interactive, char *data);
-cmdret *cmdret_new(int success, char *fmt,...);
-void cmdret_free(cmdret *ret);
+cmdret *cmdret_new(int success, char *fmt, ...);
+void cmdret_free(cmdret * ret);
 void free_user_commands(void);
 void free_aliases(void);
 void free_keymaps(void);
 char *wingravity_to_string(int g);
-rp_action *find_keybinding(KeySym keysym, unsigned int state, rp_keymap *map);
-rp_action *find_keybinding_by_action(char *action, rp_keymap *map);
-int spawn(char *cmd, rp_frame *frame);
-int vspawn(char *cmd, rp_frame *frame, rp_vscreen *vscreen);
+rp_action *find_keybinding(KeySym keysym, unsigned int state,
+                           rp_keymap * map);
+rp_action *find_keybinding_by_action(char *action, rp_keymap * map);
+int spawn(char *cmd, rp_frame * frame);
+int vspawn(char *cmd, rp_frame * frame, rp_vscreen * vscreen);
 
-#endif	/* ! _POISON_ACTIONS_H */
+#endif                          /* ! _POISON_ACTIONS_H */

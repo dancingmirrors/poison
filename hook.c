@@ -24,64 +24,60 @@
 
 #include <string.h>
 
-void
-hook_add(struct list_head *hook, struct sbuf *s)
+void hook_add(struct list_head *hook, struct sbuf *s)
 {
-	struct sbuf *cur;
+    struct sbuf *cur;
 
-	/* Check if it's in the list already. */
-	list_for_each_entry(cur, hook, node) {
-		if (!strcmp(sbuf_get(cur), sbuf_get(s))) {
-			sbuf_free(s);
-			return;
-		}
-	}
+    /* Check if it's in the list already. */
+    list_for_each_entry(cur, hook, node) {
+        if (!strcmp(sbuf_get(cur), sbuf_get(s))) {
+            sbuf_free(s);
+            return;
+        }
+    }
 
-	/* It's not in the list, so add it. */
-	list_add_tail(&s->node, hook);
+    /* It's not in the list, so add it. */
+    list_add_tail(&s->node, hook);
 }
 
-void
-hook_remove(struct list_head *hook, struct sbuf *s)
+void hook_remove(struct list_head *hook, struct sbuf *s)
 {
-	struct list_head *tmp, *iter;
-	struct sbuf *cur;
+    struct list_head *tmp, *iter;
+    struct sbuf *cur;
 
-	/* If it's in the list, delete it. */
-	list_for_each_safe_entry(cur, iter, tmp, hook, node) {
-		if (!strcmp(sbuf_get(cur), sbuf_get(s))) {
-			list_del(&cur->node);
-			sbuf_free(cur);
-		}
-	}
+    /* If it's in the list, delete it. */
+    list_for_each_safe_entry(cur, iter, tmp, hook, node) {
+        if (!strcmp(sbuf_get(cur), sbuf_get(s))) {
+            list_del(&cur->node);
+            sbuf_free(cur);
+        }
+    }
 }
 
-void
-hook_run(struct list_head *hook)
+void hook_run(struct list_head *hook)
 {
-	struct sbuf *cur;
-	cmdret *result;
+    struct sbuf *cur;
+    cmdret *result;
 
-	list_for_each_entry(cur, hook, node) {
-		result = command(1, sbuf_get(cur));
-		if (result) {
-			if (result->output)
-				message(result->output);
-			cmdret_free(result);
-		}
-	}
+    list_for_each_entry(cur, hook, node) {
+        result = command(1, sbuf_get(cur));
+        if (result) {
+            if (result->output)
+                message(result->output);
+            cmdret_free(result);
+        }
+    }
 }
 
-struct list_head *
-hook_lookup(char *s)
+struct list_head *hook_lookup(char *s)
 {
-	struct rp_hook_db_entry *entry;
+    struct rp_hook_db_entry *entry;
 
-	for (entry = rp_hook_db; entry->name; entry++) {
-		if (!strcmp(s, entry->name)) {
-			return entry->hook;
-		}
-	}
+    for (entry = rp_hook_db; entry->name; entry++) {
+        if (!strcmp(s, entry->name)) {
+            return entry->hook;
+        }
+    }
 
-	return NULL;
+    return NULL;
 }

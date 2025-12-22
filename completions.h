@@ -19,9 +19,10 @@
 #ifndef _POISON_COMPLETIONS_H
 #define _POISON_COMPLETIONS_H 1
 
-char *completions_complete(rp_completions * c, char *partial, int direction);
+char *completions_complete(rp_completions * c, char *partial,
+                           int direction);
 rp_completions *completions_new(completion_fn list_fn,
-    enum completion_styles style);
+                                enum completion_styles style);
 void completions_free(rp_completions * c);
 
-#endif	/* ! _POISON_COMPLETIONS_H */
+#endif                          /* ! _POISON_COMPLETIONS_H */

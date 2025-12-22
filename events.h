@@ -21,6 +21,6 @@
 #define _POISON_EVENTS_H 1
 
 void listen_for_events(void);
-void show_rudeness_msg(rp_window *win, int raised);
+void show_rudeness_msg(rp_window * win, int raised);
 
-#endif	/* _POISON_EVENTS_H */
+#endif                          /* _POISON_EVENTS_H */

@@ -31,37 +31,37 @@ char *list_floated_windows(void);
 void add_floated_window(char *name);
 int floated_window(Window w);
 void scanwins(void);
-void unmanage(rp_window *w);
-int update_window_name(rp_window *win);
-void update_normal_hints(rp_window *win);
+void unmanage(rp_window * w);
+int update_window_name(rp_window * win);
+void update_normal_hints(rp_window * win);
 void rename_current_window(void);
-void set_state(rp_window *win, int state);
-long get_state(rp_window *win);
-void check_state(rp_window *win);
+void set_state(rp_window * win, int state);
+long get_state(rp_window * win);
+void check_state(rp_window * win);
 
-int window_is_transient(rp_window *win);
-Atom get_net_wm_window_type(rp_window *win);
+int window_is_transient(rp_window * win);
+Atom get_net_wm_window_type(rp_window * win);
 int is_unmanaged_window_type(Window win);
-void update_window_information(rp_window *win);
-void update_window_input_hint(rp_window *win);
-void update_window_protocols(rp_window *win);
+void update_window_information(rp_window * win);
+void update_window_input_hint(rp_window * win);
+void update_window_protocols(rp_window * win);
 void cleanup_withdrawn_windows(void);
-void map_window(rp_window *win);
+void map_window(rp_window * win);
 
-void maximize(rp_window *win);
-void force_maximize(rp_window *win);
+void maximize(rp_window * win);
+void force_maximize(rp_window * win);
 
 void grab_top_level_keys(Window w);
 void ungrab_top_level_keys(Window w);
 void ungrab_keys_all_wins(void);
 void grab_keys_all_wins(void);
 
-void hide_window(rp_window *win);
-void unhide_window(rp_window *win);
+void hide_window(rp_window * win);
+void unhide_window(rp_window * win);
 void unhide_all_windows(void);
-void withdraw_window(rp_window *win);
-void hide_others(rp_window *win);
-void hide_vscreen_windows(rp_vscreen *v);
+void withdraw_window(rp_window * win);
+void hide_others(rp_window * win);
+void hide_vscreen_windows(rp_vscreen * v);
 void raise_utility_windows(void);
 
-#endif	/* ! _POISON_MANAGE_H */
+#endif                          /* ! _POISON_MANAGE_H */

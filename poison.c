@@ -38,338 +38,330 @@
 
 #include "poison.h"
 
-static void
-sighandler(int signum)
+static void sighandler(int signum)
 {
-	kill_signalled++;
+    kill_signalled++;
 }
 
-static void
-hup_handler(int signum)
+static void hup_handler(int signum)
 {
-	hup_signalled++;
+    hup_signalled++;
 }
 
-static void
-alrm_handler(int signum)
+static void alrm_handler(int signum)
 {
-	alarm_signalled++;
+    alarm_signalled++;
 }
 
-static int
-handler(Display *d, XErrorEvent *e)
+static int handler(Display *d, XErrorEvent *e)
 {
-	char error_msg[100];
+    char error_msg[100];
 
-	if (e->request_code == X_ChangeWindowAttributes &&
-	    e->error_code == BadAccess)
-		errx(1, "another window manager is already running");
+    if (e->request_code == X_ChangeWindowAttributes &&
+        e->error_code == BadAccess)
+        errx(1, "another window manager is already running");
 
 #ifdef IGNORE_BADWINDOW
-	return 0;
+    return 0;
 #else
-	if (ignore_badwindow && e->error_code == BadWindow)
-		return 0;
+    if (ignore_badwindow && e->error_code == BadWindow)
+        return 0;
 #endif
 
-	XGetErrorText(d, e->error_code, error_msg, sizeof(error_msg));
-	warnx("X error: %s", error_msg);
+    XGetErrorText(d, e->error_code, error_msg, sizeof(error_msg));
+    warnx("X error: %s", error_msg);
 
-	/*
-	 * If there is already an error to report, replace it with this new one.
-	 */
-	free(rp_error_msg);
-	rp_error_msg = xstrdup(error_msg);
+    /*
+     * If there is already an error to report, replace it with this new one.
+     */
+    free(rp_error_msg);
+    rp_error_msg = xstrdup(error_msg);
 
-	return 0;
+    return 0;
 }
 
-static void
-print_help(void)
+static void print_help(void)
 {
-	printf("%s %s\n", PROGNAME, VERSION);
-	printf("usage: %s [-h]\n", PROGNAME);
-	printf("       %s [-d dpy] [-c cmd] [-i] [-f file]\n", PROGNAME);
-	exit(0);
+    printf("%s %s\n", PROGNAME, VERSION);
+    printf("usage: %s [-h]\n", PROGNAME);
+    printf("       %s [-d dpy] [-c cmd] [-i] [-f file]\n", PROGNAME);
+    exit(0);
 }
 
-static int
-read_startup_files(const char *alt_rcfile)
+static int read_startup_files(const char *alt_rcfile)
 {
-	FILE *fileptr = NULL;
-	char *config_dir, *filename;
+    FILE *fileptr = NULL;
+    char *config_dir, *filename;
 
-	if (alt_rcfile)
-		filename = strdup(alt_rcfile);
-	else {
-		config_dir = get_config_dir();
-		filename = xsprintf("%s/config", config_dir);
-		free(config_dir);
-	}
+    if (alt_rcfile)
+        filename = strdup(alt_rcfile);
+    else {
+        config_dir = get_config_dir();
+        filename = xsprintf("%s/config", config_dir);
+        free(config_dir);
+    }
 
-	fileptr = fopen(filename, "r");
-	if (fileptr == NULL && errno != ENOENT)
-		warn("could not open %s", filename);
-	free(filename);
+    fileptr = fopen(filename, "r");
+    if (fileptr == NULL && errno != ENOENT)
+        warn("could not open %s", filename);
+    free(filename);
 
-	if (fileptr != NULL) {
-		set_close_on_exec(fileno(fileptr));
-		read_rc_file(fileptr);
-		fclose(fileptr);
-		return 1;
-	}
+    if (fileptr != NULL) {
+        set_close_on_exec(fileno(fileptr));
+        read_rc_file(fileptr);
+        fclose(fileptr);
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
-static void
-init_defaults(void)
+static void init_defaults(void)
 {
-	unsigned long atom = 0;
+    unsigned long atom = 0;
 
-	defaults.top_kmap = xstrdup(TOP_KEYMAP);
+    defaults.top_kmap = xstrdup(TOP_KEYMAP);
 
-	defaults.win_gravity = NorthWestGravity;
-	defaults.trans_gravity = CenterGravity;
-	defaults.maxsize_gravity = CenterGravity;
+    defaults.win_gravity = NorthWestGravity;
+    defaults.trans_gravity = CenterGravity;
+    defaults.maxsize_gravity = CenterGravity;
 
-	defaults.input_window_size = 200;
-	defaults.window_border_width = 0;
-	defaults.only_border = 1;
-	defaults.bar_x_padding = 3;
-	defaults.bar_y_padding = 3;
-	defaults.bar_location = NorthWestGravity;
-	defaults.bar_timeout = 3;
-	defaults.bar_border_width = 0;
-	defaults.bar_in_padding = 1;
+    defaults.input_window_size = 200;
+    defaults.window_border_width = 0;
+    defaults.only_border = 1;
+    defaults.bar_x_padding = 3;
+    defaults.bar_y_padding = 3;
+    defaults.bar_location = NorthWestGravity;
+    defaults.bar_timeout = 3;
+    defaults.bar_border_width = 0;
+    defaults.bar_in_padding = 1;
 
-	defaults.frame_indicator_timeout = 1;
-	defaults.frame_resize_unit = 10;
+    defaults.frame_indicator_timeout = 1;
+    defaults.frame_resize_unit = 10;
 
-	defaults.padding_left = 20;
-	defaults.padding_right = 20;
-	defaults.padding_top = 20;
-	defaults.padding_bottom = 20;
+    defaults.padding_left = 20;
+    defaults.padding_right = 20;
+    defaults.padding_top = 20;
+    defaults.padding_bottom = 20;
 
-	defaults.gap = 10;
+    defaults.gap = 10;
 
-	defaults.font_string = xstrdup(DEFAULT_XFT_FONT);
+    defaults.font_string = xstrdup(DEFAULT_XFT_FONT);
 
-	defaults.fgcolor_string = xstrdup("black");
-	defaults.bgcolor_string = xstrdup("white");
-	defaults.fwcolor_string = xstrdup("black");
-	defaults.bwcolor_string = xstrdup("black");
-	defaults.barbordercolor_string = xstrdup("#eeeeee");
+    defaults.fgcolor_string = xstrdup("black");
+    defaults.bgcolor_string = xstrdup("white");
+    defaults.fwcolor_string = xstrdup("black");
+    defaults.bwcolor_string = xstrdup("black");
+    defaults.barbordercolor_string = xstrdup("#eeeeee");
 
-	defaults.wait_for_key_cursor = 1;
+    defaults.wait_for_key_cursor = 1;
 
-	defaults.window_fmt = xstrdup("%n%s%t");
-	defaults.info_fmt = xstrdup("(%H, %W) %n(%t)");
-	defaults.frame_fmt = xstrdup("Frame %f (%Wx%H)");
-	defaults.sticky_fmt = xstrdup("%t");
-	defaults.resize_fmt = xstrdup("Resize frame (%Wx%H)");
+    defaults.window_fmt = xstrdup("%n%s%t");
+    defaults.info_fmt = xstrdup("(%H, %W) %n(%t)");
+    defaults.frame_fmt = xstrdup("Frame %f (%Wx%H)");
+    defaults.sticky_fmt = xstrdup("%t");
+    defaults.resize_fmt = xstrdup("Resize frame (%Wx%H)");
 
-	defaults.win_name = WIN_NAME_RES_NAME;
-	defaults.warp = 0;
-	defaults.window_list_style = STYLE_COLUMN;
-	defaults.frame_selectors = xstrdup("");
-	defaults.maxundos = 20;
+    defaults.win_name = WIN_NAME_RES_NAME;
+    defaults.warp = 0;
+    defaults.window_list_style = STYLE_COLUMN;
+    defaults.frame_selectors = xstrdup("");
+    defaults.maxundos = 20;
 
-	get_atom(DefaultRootWindow(dpy), _net_number_of_desktops, XA_CARDINAL,
-	    0, &atom, 1, NULL);
-	if (atom > 0)
-		defaults.vscreens = (int)atom;
-	else
-		defaults.vscreens = 12;
+    get_atom(DefaultRootWindow(dpy), _net_number_of_desktops, XA_CARDINAL,
+             0, &atom, 1, NULL);
+    if (atom > 0)
+        defaults.vscreens = (int) atom;
+    else
+        defaults.vscreens = 12;
 
-	defaults.ignore_resize_hints = 0;
-	defaults.win_add_cur_vscreen = 0;
+    defaults.ignore_resize_hints = 0;
+    defaults.win_add_cur_vscreen = 0;
 }
 
-static void
-init_shape(void)
+static void init_shape(void)
 {
-	int shape_error_base;
+    int shape_error_base;
 
-	rp_have_shape = XShapeQueryExtension(dpy, &rp_shape_event_base,
-	    &shape_error_base);
-	if (rp_have_shape) {
-		PRINT_DEBUG(("Shape extension detected (event base: %d)\n",
-		    rp_shape_event_base));
-	}
+    rp_have_shape = XShapeQueryExtension(dpy, &rp_shape_event_base,
+                                         &shape_error_base);
+    if (rp_have_shape) {
+        PRINT_DEBUG(("Shape extension detected (event base: %d)\n",
+                     rp_shape_event_base));
+    }
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-	int c, fd;
-	char **cmd = NULL;
-	int cmd_count = 0;
-	char *display = NULL;
-	int interactive = 0;
-	char *alt_rcfile = NULL;
-	char pid[8];
+    int c, fd;
+    char **cmd = NULL;
+    int cmd_count = 0;
+    char *display = NULL;
+    int interactive = 0;
+    char *alt_rcfile = NULL;
+    char pid[8];
 
-	setlocale(LC_CTYPE, "");
+    setlocale(LC_CTYPE, "");
 
-	if (XSupportsLocale()) {
-		if (!XSetLocaleModifiers(""))
-			warnx("couldn't set X locale modifiers");
-	} else
-		warnx("X doesn't seem to support your locale");
+    if (XSupportsLocale()) {
+        if (!XSetLocaleModifiers(""))
+            warnx("couldn't set X locale modifiers");
+    } else
+        warnx("X doesn't seem to support your locale");
 
-	/* Parse the arguments */
-	myargv = argv;
-	while ((c = getopt(argc, argv, "c:d:hif:")) != -1) {
-		switch (c) {
-		case 'c':
-			cmd = xrealloc(cmd, sizeof(char *) * (cmd_count + 1));
-			cmd[cmd_count++] = xstrdup(optarg);
-			break;
-		case 'd':
-			display = optarg;
-			break;
-		case 'f':
-			alt_rcfile = optarg;
-			break;
-		case 'h':
-			print_help();
-			break;
-		case 'i':
-			interactive = 1;
-			break;
-		default:
-			warnx("unsupported option %c", c);
-			print_help();
-		}
-	}
+    /* Parse the arguments */
+    myargv = argv;
+    while ((c = getopt(argc, argv, "c:d:hif:")) != -1) {
+        switch (c) {
+        case 'c':
+            cmd = xrealloc(cmd, sizeof(char *) * (cmd_count + 1));
+            cmd[cmd_count++] = xstrdup(optarg);
+            break;
+        case 'd':
+            display = optarg;
+            break;
+        case 'f':
+            alt_rcfile = optarg;
+            break;
+        case 'h':
+            print_help();
+            break;
+        case 'i':
+            interactive = 1;
+            break;
+        default:
+            warnx("unsupported option %c", c);
+            print_help();
+        }
+    }
 
-	/* Report extra unparsed arguments. */
-	if (optind < argc) {
-		warnx("bogus arguments:");
-		while (optind < argc)
-			fprintf(stderr, "%s ", argv[optind++]);
-		fputc('\n', stderr);
-		exit(1);
-	}
-	if (!(dpy = XOpenDisplay(display)))
-		errx(1, "can't open display %s", display);
-	set_close_on_exec(ConnectionNumber(dpy));
+    /* Report extra unparsed arguments. */
+    if (optind < argc) {
+        warnx("bogus arguments:");
+        while (optind < argc)
+            fprintf(stderr, "%s ", argv[optind++]);
+        fputc('\n', stderr);
+        exit(1);
+    }
+    if (!(dpy = XOpenDisplay(display)))
+        errx(1, "can't open display %s", display);
+    set_close_on_exec(ConnectionNumber(dpy));
 
-	/* forked commands should not get X console tty as their stdin */
-	fd = open("/dev/null", O_RDONLY);
-	dup2(fd, STDIN_FILENO);
-	close(fd);
+    /* forked commands should not get X console tty as their stdin */
+    fd = open("/dev/null", O_RDONLY);
+    dup2(fd, STDIN_FILENO);
+    close(fd);
 
-	/* Set our own specific Atoms. */
-	rp_selection = XInternAtom(dpy, "RP_SELECTION", False);
+    /* Set our own specific Atoms. */
+    rp_selection = XInternAtom(dpy, "RP_SELECTION", False);
 
-	/* TEXT atoms */
-	xa_string = XA_STRING;
-	xa_compound_text = XInternAtom(dpy, "COMPOUND_TEXT", False);
-	xa_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
+    /* TEXT atoms */
+    xa_string = XA_STRING;
+    xa_compound_text = XInternAtom(dpy, "COMPOUND_TEXT", False);
+    xa_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
 
-	init_control_socket_path();
+    init_control_socket_path();
 
-	if (cmd_count > 0) {
-		int j, exit_status = 0;
+    if (cmd_count > 0) {
+        int j, exit_status = 0;
 
-		for (j = 0; j < cmd_count; j++) {
-			if (!send_command(interactive, cmd[j]))
-				exit_status = 1;
-			free(cmd[j]);
-		}
+        for (j = 0; j < cmd_count; j++) {
+            if (!send_command(interactive, cmd[j]))
+                exit_status = 1;
+            free(cmd[j]);
+        }
 
-		free(cmd);
-		XCloseDisplay(dpy);
-		return exit_status;
-	}
+        free(cmd);
+        XCloseDisplay(dpy);
+        return exit_status;
+    }
 
-	/* For child processes to know */
-	snprintf(pid, sizeof(pid), "%d", getpid());
-	setenv("POISON_PID", pid, 1);
+    /* For child processes to know */
+    snprintf(pid, sizeof(pid), "%d", getpid());
+    setenv("POISON_PID", pid, 1);
 
-	/* Must be first */
-	register_atom(&_net_supported, "_NET_SUPPORTED");
+    /* Must be first */
+    register_atom(&_net_supported, "_NET_SUPPORTED");
 
-	register_atom(&wm_change_state, "WM_CHANGE_STATE");
-	register_atom(&wm_colormaps, "WM_COLORMAP_WINDOWS");
-	register_atom(&wm_delete, "WM_DELETE_WINDOW");
-	register_atom(&wm_name, "WM_NAME");
-	register_atom(&wm_protocols, "WM_PROTOCOLS");
-	register_atom(&wm_state, "WM_STATE");
-	register_atom(&wm_take_focus, "WM_TAKE_FOCUS");
+    register_atom(&wm_change_state, "WM_CHANGE_STATE");
+    register_atom(&wm_colormaps, "WM_COLORMAP_WINDOWS");
+    register_atom(&wm_delete, "WM_DELETE_WINDOW");
+    register_atom(&wm_name, "WM_NAME");
+    register_atom(&wm_protocols, "WM_PROTOCOLS");
+    register_atom(&wm_state, "WM_STATE");
+    register_atom(&wm_take_focus, "WM_TAKE_FOCUS");
 
-	register_atom(&_net_active_window, "_NET_ACTIVE_WINDOW");
-	register_atom(&_net_client_list, "_NET_CLIENT_LIST");
-	register_atom(&_net_client_list_stacking, "_NET_CLIENT_LIST_STACKING");
-	register_atom(&_net_current_desktop, "_NET_CURRENT_DESKTOP");
-	register_atom(&_net_number_of_desktops, "_NET_NUMBER_OF_DESKTOPS");
-	register_atom(&_net_workarea, "_NET_WORKAREA");
+    register_atom(&_net_active_window, "_NET_ACTIVE_WINDOW");
+    register_atom(&_net_client_list, "_NET_CLIENT_LIST");
+    register_atom(&_net_client_list_stacking, "_NET_CLIENT_LIST_STACKING");
+    register_atom(&_net_current_desktop, "_NET_CURRENT_DESKTOP");
+    register_atom(&_net_number_of_desktops, "_NET_NUMBER_OF_DESKTOPS");
+    register_atom(&_net_workarea, "_NET_WORKAREA");
 
-	register_atom(&_net_wm_name, "_NET_WM_NAME");
-	register_atom(&_net_wm_pid, "_NET_WM_PID");
-	register_atom(&_net_wm_state, "_NET_WM_STATE");
-	register_atom(&_net_wm_state_fullscreen, "_NET_WM_STATE_FULLSCREEN");
-	register_atom(&_net_wm_window_type, "_NET_WM_WINDOW_TYPE");
-	register_atom(&_net_wm_window_type_dialog, "_NET_WM_WINDOW_TYPE_DIALOG");
-	register_atom(&_net_wm_window_type_dock, "_NET_WM_WINDOW_TYPE_DOCK");
-	register_atom(&_net_wm_window_type_splash, "_NET_WM_WINDOW_TYPE_SPLASH");
-	register_atom(&_net_wm_window_type_tooltip,
-	    "_NET_WM_WINDOW_TYPE_TOOLTIP");
-	register_atom(&_net_wm_window_type_utility,
-	    "_NET_WM_WINDOW_TYPE_UTILITY");
-	register_atom(&_net_supporting_wm_check,
-	    "_NET_SUPPORTING_WM_CHECK");
+    register_atom(&_net_wm_name, "_NET_WM_NAME");
+    register_atom(&_net_wm_pid, "_NET_WM_PID");
+    register_atom(&_net_wm_state, "_NET_WM_STATE");
+    register_atom(&_net_wm_state_fullscreen, "_NET_WM_STATE_FULLSCREEN");
+    register_atom(&_net_wm_window_type, "_NET_WM_WINDOW_TYPE");
+    register_atom(&_net_wm_window_type_dialog,
+                  "_NET_WM_WINDOW_TYPE_DIALOG");
+    register_atom(&_net_wm_window_type_dock, "_NET_WM_WINDOW_TYPE_DOCK");
+    register_atom(&_net_wm_window_type_splash,
+                  "_NET_WM_WINDOW_TYPE_SPLASH");
+    register_atom(&_net_wm_window_type_tooltip,
+                  "_NET_WM_WINDOW_TYPE_TOOLTIP");
+    register_atom(&_net_wm_window_type_utility,
+                  "_NET_WM_WINDOW_TYPE_UTILITY");
+    register_atom(&_net_supporting_wm_check, "_NET_SUPPORTING_WM_CHECK");
 
-	/* Setup signal handlers. */
-	XSetErrorHandler(handler);
-	set_sig_handler(SIGALRM, alrm_handler);
-	set_sig_handler(SIGTERM, sighandler);
-	set_sig_handler(SIGINT, sighandler);
-	set_sig_handler(SIGHUP, hup_handler);
-	set_sig_handler(SIGCHLD, chld_handler);
+    /* Setup signal handlers. */
+    XSetErrorHandler(handler);
+    set_sig_handler(SIGALRM, alrm_handler);
+    set_sig_handler(SIGTERM, sighandler);
+    set_sig_handler(SIGINT, sighandler);
+    set_sig_handler(SIGHUP, hup_handler);
+    set_sig_handler(SIGCHLD, chld_handler);
 
-	if (bar_mkfifo() == -1)
-		return 1;
+    if (bar_mkfifo() == -1)
+        return 1;
 
-	/* Setup our internal structures */
-	init_defaults();
-	init_window_stuff();
-	init_xrandr();
-	init_shape();
-	init_screens();
+    /* Setup our internal structures */
+    init_defaults();
+    init_window_stuff();
+    init_xrandr();
+    init_shape();
+    init_screens();
 
-	update_modifier_map();
-	init_user_commands();
-	initialize_default_keybindings();
-	init_bar();
+    update_modifier_map();
+    init_user_commands();
+    initialize_default_keybindings();
+    init_bar();
 
-	/* Start the integrated commoner compositor */
-	start_compositor();
+    /* Start the integrated commoner compositor */
+    start_compositor();
 
-	scanwins();
+    scanwins();
 
-	c = read_startup_files(alt_rcfile);
-	if (c == -1)
-		return 1;
-	if (c == 0) {
-		/* No config file, just do something basic. */
-		cmdret *result;
-		if ((result = command(0, "hsplit")))
-			cmdret_free(result);
-	}
+    c = read_startup_files(alt_rcfile);
+    if (c == -1)
+        return 1;
+    if (c == 0) {
+        /* No config file, just do something basic. */
+        cmdret *result;
+        if ((result = command(0, "hsplit")))
+            cmdret_free(result);
+    }
 
-	/* If no window has focus, give the key_window focus. */
-	if (current_window() == NULL)
-		set_window_focus(rp_current_screen->key_window);
+    /* If no window has focus, give the key_window focus. */
+    if (current_window() == NULL)
+        set_window_focus(rp_current_screen->key_window);
 
 #ifdef __OpenBSD__
-	pledge("stdio rpath cpath wpath fattr unix proc exec", NULL);
+    pledge("stdio rpath cpath wpath fattr unix proc exec", NULL);
 #endif
 
-	listen_for_commands();
-	listen_for_events();
+    listen_for_commands();
+    listen_for_events();
 
-	return 0;
+    return 0;
 }

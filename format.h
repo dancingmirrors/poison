@@ -20,6 +20,7 @@
 #ifndef _POISON_FORMAT_H
 #define _POISON_FORMAT_H 1
 
-void format_string(char *fmt, rp_window_elem *win_elem, struct sbuf *buffer);
+void format_string(char *fmt, rp_window_elem * win_elem,
+                   struct sbuf *buffer);
 
-#endif	/* _POISON_FORMAT_H */
+#endif                          /* _POISON_FORMAT_H */

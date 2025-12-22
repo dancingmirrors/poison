@@ -48,4 +48,4 @@
 
 #define EMPTY_FRAME_MESSAGE		"Current Frame"
 
-#endif	/* ! _POISON_MESSAGES_H */
+#endif                          /* ! _POISON_MESSAGES_H */

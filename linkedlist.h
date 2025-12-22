@@ -36,7 +36,7 @@
  */
 
 struct list_head {
-	struct list_head *next, *prev;
+    struct list_head *next, *prev;
 };
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
@@ -49,7 +49,7 @@ struct list_head {
 } while (0)
 
 /* Prototypes of C functions. */
-int list_size(struct list_head * list);
+int list_size(struct list_head *list);
 void list_splice_init(struct list_head *list, struct list_head *head);
 
 void list_splice(struct list_head *list, struct list_head *head);
@@ -64,11 +64,11 @@ void list_move(struct list_head *list, struct list_head *head);
 
 void list_del_init(struct list_head *entry);
 void list_del(struct list_head *entry);
-void __list_del(struct list_head *prev, struct list_head * next);
+void __list_del(struct list_head *prev, struct list_head *next);
 void list_add_tail(struct list_head *new, struct list_head *head);
 void list_add(struct list_head *new, struct list_head *head);
 void __list_add(struct list_head *new, struct list_head *prev,
-    struct list_head *next);
+                struct list_head *next);
 
 #define prefetch(x) __builtin_prefetch(x)
 
@@ -79,7 +79,6 @@ void __list_add(struct list_head *new, struct list_head *prev,
   if (&last->member == (head))                                  \
     last = NULL;                                                \
 }
-
 
 /**
  * container_of - cast a member of a structure out to the containing structure
@@ -101,7 +100,6 @@ void __list_add(struct list_head *new, struct list_head *prev,
  */
 #define list_entry(ptr, type, member) \
         container_of(ptr, type, member)
-
 
 /**
  * __list_for_each      -       iterate over a list
@@ -195,7 +193,6 @@ void __list_add(struct list_head *new, struct list_head *prev,
 
 #endif
 
-
 /* Return the first element in the list. */
 #define list_first(first, head, member)                         \
 {                                                               \
@@ -205,6 +202,6 @@ void __list_add(struct list_head *new, struct list_head *prev,
 }
 
 void
-list_sort(void *priv, struct list_head * head,
-    int (*cmp) (void *priv, struct list_head * a,
-	struct list_head * b));
+list_sort(void *priv, struct list_head *head,
+          int (*cmp)(void *priv, struct list_head * a,
+                     struct list_head * b));

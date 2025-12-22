@@ -25,4 +25,4 @@ void listen_for_commands(void);
 int send_command(int interactive, char *cmd);
 void receive_command(void);
 
-#endif	/* ! _POISON_COMMUNICATIONS_H */
+#endif                          /* ! _POISON_COMMUNICATIONS_H */

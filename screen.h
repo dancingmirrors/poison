@@ -19,28 +19,29 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
-int screen_bottom(rp_screen *s);
-int screen_top(rp_screen *s);
-int screen_right(rp_screen *s);
-int screen_left(rp_screen *s);
-int screen_height(rp_screen *s);
-int screen_width(rp_screen *s);
+int screen_bottom(rp_screen * s);
+int screen_top(rp_screen * s);
+int screen_right(rp_screen * s);
+int screen_left(rp_screen * s);
+int screen_height(rp_screen * s);
+int screen_width(rp_screen * s);
 
 rp_screen *find_screen(Window w);
 rp_screen *find_screen_by_attr(XWindowAttributes w);
 
 void init_screens(void);
-void activate_screen(rp_screen *s);
-void deactivate_screen(rp_screen *s);
+void activate_screen(rp_screen * s);
+void deactivate_screen(rp_screen * s);
 
 int is_rp_window(Window w);
 int is_a_root_window(unsigned int w);
 
-char *screen_dump(rp_screen *screen);
+char *screen_dump(rp_screen * screen);
 
-void screen_update(rp_screen *s, int left, int top, int width, int height);
-void screen_update_frames(rp_screen *s);
-void screen_update_workarea(rp_screen *s);
+void screen_update(rp_screen * s, int left, int top, int width,
+                   int height);
+void screen_update_frames(rp_screen * s);
+void screen_update_workarea(rp_screen * s);
 
 int screen_count(void);
 rp_screen *screen_primary(void);
@@ -52,8 +53,8 @@ rp_screen *screen_number(int number);
 void screen_sort(void);
 
 rp_screen *screen_add(int rr_output);
-void screen_del(rp_screen *s);
-void screen_free(rp_screen *s);
+void screen_del(rp_screen * s);
+void screen_free(rp_screen * s);
 void screen_free_final(void);
 
 #endif

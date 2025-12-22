@@ -22,38 +22,38 @@
 
 #include "sbuf.h"
 
-void free_window(rp_window *w);
-rp_window *add_to_window_list(rp_screen *s, Window w);
+void free_window(rp_window * w);
+rp_window *add_to_window_list(rp_screen * s, Window w);
 void last_window(void);
 rp_window *find_window_in_list(Window w, struct list_head *list);
 rp_window *find_window(Window w);
 void maximize_current_window(void);
-void give_window_focus(rp_window *win, rp_window *last_win);
-void set_active_window(rp_window *win);
-void set_active_window_force(rp_window *win);
-void goto_window(rp_window *win);
-void update_window_gravity(rp_window *win);
-char *window_name(rp_window *win);
+void give_window_focus(rp_window * win, rp_window * last_win);
+void set_active_window(rp_window * win);
+void set_active_window_force(rp_window * win);
+void goto_window(rp_window * win);
+void update_window_gravity(rp_window * win);
+char *window_name(rp_window * win);
 
 /* int goto_window_name (char *name); */
-rp_window *find_window_other(rp_vscreen *vscreen);
+rp_window *find_window_other(rp_vscreen * vscreen);
 rp_window *find_window_by_number(int n);
 rp_window *find_window_name(char *name, int exact_match);
 rp_window *find_window_number(int n);
 
-void insert_into_list(rp_window *win, struct list_head *list);
+void insert_into_list(rp_window * win, struct list_head *list);
 
 void get_current_window_in_fmt(char *fmt, struct sbuf *buffer);
 void get_window_list(char *fmt, char *delim, struct sbuf *buffer,
-    int *mark_start, int *mark_end);
+                     int *mark_start, int *mark_end);
 void init_window_stuff(void);
 void free_window_stuff(void);
 
-rp_frame *win_get_frame(rp_window *win);
+rp_frame *win_get_frame(rp_window * win);
 
 struct rp_child_info *get_child_info(Window w, int add);
-void change_windows_vscreen(rp_vscreen *v, rp_vscreen *new_vscreen);
+void change_windows_vscreen(rp_vscreen * v, rp_vscreen * new_vscreen);
 
-void window_full_screen(rp_window *win);
+void window_full_screen(rp_window * win);
 
-#endif	/* ! _POISON_LIST_H */
+#endif                          /* ! _POISON_LIST_H */

@@ -21,20 +21,17 @@
 
 #include <langinfo.h>
 
-int
-isu8char(char c)
+int isu8char(char c)
 {
-	return (c) & 0xC0;
+    return (c) & 0xC0;
 }
 
-int
-isu8start(char c)
+int isu8start(char c)
 {
-	return ((c) & 0xC0) == 0xC0;
+    return ((c) & 0xC0) == 0xC0;
 }
 
-int
-isu8cont(char c)
+int isu8cont(char c)
 {
-	return ((c) & 0xC0) == 0x80;
+    return ((c) & 0xC0) == 0x80;
 }
