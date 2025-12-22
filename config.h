@@ -36,14 +36,6 @@
 #define INPUT_ABORT_KEY      XK_g
 #define INPUT_ABORT_MODIFIER RP_CONTROL_MASK
 
-/* This is the previous history entry key when typing input. */
-#define INPUT_PREV_HISTORY_KEY      XK_p
-#define INPUT_PREV_HISTORY_MODIFIER RP_CONTROL_MASK
-
-/* This is the next history entry key when typing input. */
-#define INPUT_NEXT_HISTORY_KEY      XK_n
-#define INPUT_NEXT_HISTORY_MODIFIER RP_CONTROL_MASK
-
 /* Key used to enlarge frame vertically when in resize mode.  */
 #define RESIZE_VGROW_KEY      XK_n
 #define RESIZE_VGROW_MODIFIER RP_CONTROL_MASK
@@ -67,9 +59,6 @@
 /* Key used to exit resize mode.  */
 #define RESIZE_END_KEY      XK_Return
 #define RESIZE_END_MODIFIER 0
-
-/* Number of history items to store. */
-#define INPUT_MAX_HISTORY 50
 
 /*
  * Treat windows with maxsize hints as if they were a transient window (don't
@@ -101,12 +90,6 @@
 
 /* This is the name of the first vscreen that is created. */
 #define DEFAULT_VSCREEN_NAME "default"
-
-/* Maximum allowed history size */
-#define MAX_HISTORY_SIZE 100
-
-/* The default filename in which to store the history */
-#define HISTORY_FILE "history"
 
 /* The name of the root keymap */
 #define ROOT_KEYMAP "root"

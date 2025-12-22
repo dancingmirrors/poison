@@ -44,8 +44,6 @@ static edit_status editor_paste_selection(rp_input_line * line);
 static edit_status editor_abort(rp_input_line * line);
 static edit_status editor_no_action(rp_input_line * line);
 static edit_status editor_enter(rp_input_line * line);
-static edit_status editor_history_previous(rp_input_line * line);
-static edit_status editor_history_next(rp_input_line * line);
 static edit_status editor_backward_kill_line(rp_input_line * line);
 static edit_status editor_complete_prev(rp_input_line * line);
 static edit_status editor_complete_next(rp_input_line * line);
@@ -82,10 +80,6 @@ static edit_binding edit_bindings[] =
 { { XK_k, RP_CONTROL_MASK}, editor_kill_line },
 { { XK_u, RP_CONTROL_MASK}, editor_backward_kill_line },
 { { XK_y, RP_CONTROL_MASK}, editor_paste_selection },
-{ { XK_p, RP_CONTROL_MASK}, editor_history_previous },
-{ { XK_Up, 0}, editor_history_previous },
-{ { XK_n, RP_CONTROL_MASK}, editor_history_next },
-{ { XK_Down, 0}, editor_history_next },
 { { XK_Return, 0}, editor_enter },
 { { XK_m, RP_CONTROL_MASK}, editor_enter },
 { { XK_KP_Enter, 0}, editor_enter },
@@ -369,18 +363,6 @@ static edit_status editor_backward_kill_line(rp_input_line *line)
     return EDIT_DELETE;
 }
 
-static edit_status editor_history_previous(rp_input_line *line)
-{
-    /* History functionality removed */
-    return EDIT_NO_OP;
-}
-
-static edit_status editor_history_next(rp_input_line *line)
-{
-    /* History functionality removed */
-    return EDIT_NO_OP;
-}
-
 static edit_status editor_abort(rp_input_line *line)
 {
     return EDIT_ABORT;
@@ -416,7 +398,6 @@ static edit_status editor_insert(rp_input_line *line, char *keysym_buf)
 static edit_status editor_enter(rp_input_line *line)
 {
     line->buffer[line->length] = '\0';
-    /* History functionality removed - history_add() call removed */
     return EDIT_DONE;
 }
 
