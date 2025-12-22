@@ -3098,6 +3098,51 @@ read_desktop_dir(const char *dir, struct list_head *apps)
 	closedir(dp);
 }
 
+/* Comparison function for sorting apps with LC_COLLATE=C behavior */
+static int
+compare_apps(const char *name1, const char *name2)
+{
+	/* LC_COLLATE=C behavior: uppercase before lowercase, then alphabetical */
+	return strcmp(name1, name2);
+}
+
+/* Sort application list alphabetically using LC_COLLATE=C behavior */
+static void
+sort_app_list(struct list_head *apps)
+{
+	struct desktop_app *app, *tmp, *sorted_app;
+	struct list_head sorted;
+	int inserted;
+
+	if (list_empty(apps))
+		return;
+
+	/* Initialize sorted list */
+	INIT_LIST_HEAD(&sorted);
+
+	/* Insertion sort */
+	list_for_each_entry_safe(app, tmp, apps, node) {
+		list_del(&app->node);
+		inserted = 0;
+
+		/* Find insertion point */
+		list_for_each_entry(sorted_app, &sorted, node) {
+			if (compare_apps(app->name, sorted_app->name) < 0) {
+				list_add_tail(&app->node, &sorted_app->node);
+				inserted = 1;
+				break;
+			}
+		}
+
+		/* If not inserted, add to end */
+		if (!inserted)
+			list_add_tail(&app->node, &sorted);
+	}
+
+	/* Move sorted list back to original list */
+	list_splice(&sorted, apps);
+}
+
 /* Clean up Exec field by removing %u, %U, %f, %F, etc. */
 static char *
 clean_exec_field(const char *exec)
@@ -3192,6 +3237,9 @@ cmd_applauncher(int interactive, struct cmdarg **args)
 	INIT_LIST_HEAD(&apps);
 	read_desktop_dir("/usr/share/applications", &apps);
 	read_desktop_dir("/usr/local/share/applications", &apps);
+
+	/* Sort applications alphabetically with LC_COLLATE=C behavior */
+	sort_app_list(&apps);
 
 	/* Check if we found any apps */
 	if (list_empty(&apps))
