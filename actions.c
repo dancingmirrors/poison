@@ -827,6 +827,10 @@ void initialize_default_keybindings(void)
     add_keybinding(XK_o, RP_SUPER_MASK, "only", map);
     add_keybinding(XK_p, RP_SUPER_MASK, "applauncher", map);
     add_keybinding(XK_question, RP_SUPER_MASK, "help " ROOT_KEYMAP, map);
+    add_keybinding(XK_Up, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeup", map);
+    add_keybinding(XK_Down, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangedown", map);
+    add_keybinding(XK_Left, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeleft", map);
+    add_keybinding(XK_Right, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeright", map);
     add_keybinding(XK_v, RP_SUPER_MASK, "vsplit", map);
     add_keybinding(XK_w, RP_SUPER_MASK, "windows", map);
     add_keybinding(XK_Return, RP_SUPER_MASK | RP_SHIFT_MASK, "term", map);
