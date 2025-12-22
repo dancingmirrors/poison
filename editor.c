@@ -53,8 +53,6 @@ static edit_status editor_complete_next(rp_input_line *line);
 /* default edit action */
 static edit_status editor_insert(rp_input_line *line, char *keysym_buf);
 
-static char *saved_command = NULL;
-
 typedef struct edit_binding edit_binding;
 
 struct edit_binding {
@@ -97,8 +95,8 @@ static edit_binding edit_bindings[] =
 };
 
 rp_input_line *
-input_line_new(char *prompt, char *preinput, int history_id,
-    enum completion_styles style, completion_fn fn)
+input_line_new(char *prompt, char *preinput, enum completion_styles style,
+    completion_fn fn)
 {
 	rp_input_line *line;
 	size_t length;
@@ -106,7 +104,6 @@ input_line_new(char *prompt, char *preinput, int history_id,
 	line = xmalloc(sizeof(rp_input_line));
 	line->prompt = prompt;
 	line->compl = completions_new(fn, style);
-	line->history_id = history_id;
 
 	/* Allocate some memory to start with (100 extra bytes) */
 	length = strlen(preinput);
@@ -389,53 +386,15 @@ editor_backward_kill_line(rp_input_line *line)
 static edit_status
 editor_history_previous(rp_input_line *line)
 {
-	const char *entry = history_previous(line->history_id);
-
-	if (entry) {
-		if (!saved_command) {
-			line->buffer[line->length] = '\0';
-			saved_command = xstrdup(line->buffer);
-			PRINT_DEBUG(("saved current command line: \'%s\'\n",
-			    saved_command));
-		}
-		free(line->buffer);
-		line->buffer = xstrdup(entry);
-		line->length = strlen(line->buffer);
-		line->size = line->length + 1;
-		line->position = line->length;
-		PRINT_DEBUG(("entry: \'%s\'\n", line->buffer));
-	} else {
-		PRINT_DEBUG(("- do nothing -\n"));
-		return EDIT_NO_OP;
-	}
-
-	return EDIT_INSERT;
+	/* History functionality removed */
+	return EDIT_NO_OP;
 }
 
 static edit_status
 editor_history_next(rp_input_line *line)
 {
-	const char *entry = history_next(line->history_id);
-
-	if (entry) {
-		free(line->buffer);
-		line->buffer = xstrdup(entry);
-		PRINT_DEBUG(("entry: \'%s\'\n", line->buffer));
-	} else if (saved_command) {
-		free(line->buffer);
-		line->buffer = saved_command;
-		saved_command = NULL;
-		PRINT_DEBUG(("restored command line: \'%s\'\n", line->buffer));
-	} else {
-		PRINT_DEBUG(("- do nothing -\n"));
-		return EDIT_NO_OP;
-	}
-
-	line->length = strlen(line->buffer);
-	line->size = line->length + 1;
-	line->position = line->length;
-
-	return EDIT_INSERT;
+	/* History functionality removed */
+	return EDIT_NO_OP;
 }
 
 static edit_status
@@ -477,7 +436,7 @@ static edit_status
 editor_enter(rp_input_line *line)
 {
 	line->buffer[line->length] = '\0';
-	history_add(line->history_id, line->buffer);
+	/* History functionality removed - history_add() call removed */
 	return EDIT_DONE;
 }
 

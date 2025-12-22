@@ -23,8 +23,8 @@
 char *keysym_to_string(KeySym keysym, unsigned int modifier);
 int cook_keycode(XKeyEvent *ev, KeySym *keysym, unsigned int *mod,
     char *keysym_name, int len, int ignore_bad_mods);
-char *get_input(char *prompt, int history_id, completion_fn fn);
-char *get_more_input(char *prompt, char *preinput, int history_id,
+char *get_input(char *prompt, completion_fn fn);
+char *get_more_input(char *prompt, char *preinput,
     enum completion_styles style, completion_fn fn);
 void read_any_key(void);
 int read_single_key(KeySym *keysym, unsigned int *modifiers, char *keysym_name,

@@ -454,13 +454,13 @@ update_input_window(rp_screen *s, rp_input_line *line)
 }
 
 char *
-get_input(char *prompt, int history_id, completion_fn fn)
+get_input(char *prompt, completion_fn fn)
 {
-	return get_more_input(prompt, "", history_id, BASIC, fn);
+	return get_more_input(prompt, "", BASIC, fn);
 }
 
 char *
-get_more_input(char *prompt, char *preinput, int history_id,
+get_more_input(char *prompt, char *preinput,
     enum completion_styles style, completion_fn compl_fn)
 {
 	/* Emacs 21 uses a 513 byte string to store the keysym name. */
@@ -474,10 +474,8 @@ get_more_input(char *prompt, char *preinput, int history_id,
 	Window focus;
 	int revert, done = 0;
 
-	history_reset();
-
 	/* Create our line structure */
-	line = input_line_new(prompt, preinput, history_id, style, compl_fn);
+	line = input_line_new(prompt, preinput, style, compl_fn);
 
 	/* Switch to the default colormap. */
 	if (current_window())

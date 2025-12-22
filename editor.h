@@ -32,7 +32,7 @@ typedef enum edit_status {
 } edit_status;
 
 /* Input line functions */
-rp_input_line *input_line_new(char *prompt, char *preinput, int history_id,
+rp_input_line *input_line_new(char *prompt, char *preinput,
     enum completion_styles style, completion_fn fn);
 void input_line_free(rp_input_line * line);
 

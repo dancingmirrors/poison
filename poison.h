@@ -91,7 +91,6 @@ do {                                            \
 #include "screen.h"
 #include "vscreen.h"
 #include "editor.h"
-#include "history.h"
 #include "completions.h"
 #include "hook.h"
 #include "xrandr.h"

@@ -1539,7 +1539,7 @@ frame_selector_match(char ch)
 }
 
 static cmdret *
-read_string(struct argspec *spec, struct sbuf *s, int history_id,
+read_string(struct argspec *spec, struct sbuf *s,
     completion_fn fn, struct cmdarg ** arg)
 {
 	char *input;
@@ -1547,7 +1547,7 @@ read_string(struct argspec *spec, struct sbuf *s, int history_id,
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, history_id, fn);
+		input = get_input(spec->prompt, fn);
 
 	if (input) {
 		*arg = xmalloc(sizeof(struct cmdarg));
@@ -1568,7 +1568,7 @@ read_keymap(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_KEYMAP, keymap_completions);
+		input = get_input(spec->prompt, keymap_completions);
 
 	if (input) {
 		rp_keymap *map;
@@ -1601,7 +1601,7 @@ read_keydesc(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_KEY, trivial_completions);
+		input = get_input(spec->prompt, trivial_completions);
 
 	if (input) {
 		cmdret *ret;
@@ -1694,7 +1694,7 @@ colon_completions(char *str)
 static cmdret *
 read_command(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 {
-	return read_string(spec, s, hist_COMMAND, colon_completions, arg);
+	return read_string(spec, s, colon_completions, arg);
 }
 
 static struct list_head *
@@ -1763,16 +1763,7 @@ read_shellcmd(struct argspec *spec, struct sbuf *s, struct cmdarg **arg,
 {
 	cmdret *ret;
 
-	ret = read_string(spec, s, hist_SHELLCMD, exec_completions, arg);
-	if (command_name && !s && !ret && (*arg)->string) {
-		/* store for command history */
-		struct sbuf *buf;
-
-		buf = sbuf_new(0);
-		sbuf_printf(buf, "%s %s", command_name, (*arg)->string);
-		history_add(hist_COMMAND, sbuf_get(buf));
-		sbuf_free(buf);
-	}
+	ret = read_string(spec, s, exec_completions, arg);
 
 	return ret;
 }
@@ -1901,7 +1892,7 @@ read_window(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		name = xstrdup(sbuf_get(s));
 	else
-		name = get_input(spec->prompt, hist_WINDOW, window_completions);
+		name = get_input(spec->prompt, window_completions);
 
 	if (name) {
 		/* try by name */
@@ -1962,7 +1953,7 @@ read_gravity(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_GRAVITY,
+		input = get_input(spec->prompt,
 		    trivial_completions);
 
 	if (input) {
@@ -2022,7 +2013,7 @@ read_vscreen(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_VSCREEN,
+		input = get_input(spec->prompt,
 		    vscreen_completions);
 
 	if (input) {
@@ -2074,7 +2065,7 @@ read_hook(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_HOOK, hook_completions);
+		input = get_input(spec->prompt, hook_completions);
 
 	if (input) {
 		struct list_head *hook = hook_lookup(input);
@@ -2140,7 +2131,7 @@ read_variable(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		input = get_input(spec->prompt, hist_VARIABLE, var_completions);
+		input = get_input(spec->prompt, var_completions);
 
 	if (input) {
 		struct set_var *var = find_variable(input);
@@ -2172,8 +2163,7 @@ read_number(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 	if (s)
 		input = xstrdup(sbuf_get(s));
 	else
-		/* numbers should perhaps be more fine grained, or hist_NONE */
-		input = get_input(spec->prompt, hist_OTHER,
+		input = get_input(spec->prompt,
 		    trivial_completions);
 
 	if (input) {
@@ -2212,7 +2202,7 @@ read_arg(struct argspec *spec, struct sbuf *s, struct cmdarg **arg,
 	case arg_STRING:
 	case arg_REST:
 	case arg_RAW:
-		ret = read_string(spec, s, hist_OTHER, trivial_completions, arg);
+		ret = read_string(spec, s, trivial_completions, arg);
 		break;
 	case arg_KEYMAP:
 		ret = read_keymap(spec, s, arg);
@@ -2616,11 +2606,11 @@ cmd_colon(int interactive, struct cmdarg **args)
 	char *input;
 
 	if (args[0] == NULL)
-		input = get_input(MESSAGE_PROMPT_COMMAND, hist_COMMAND,
+		input = get_input(MESSAGE_PROMPT_COMMAND,
 		    colon_completions);
 	else
 		input = get_more_input(MESSAGE_PROMPT_COMMAND, ARG_STRING(0),
-		    hist_COMMAND, BASIC, colon_completions);
+		    BASIC, colon_completions);
 
 	/* User aborted. */
 	if (input == NULL)
@@ -5581,7 +5571,7 @@ cmd_prompt(int interactive, struct cmdarg **args)
 	char *output;
 
 	if (args[0] == NULL)
-		output = get_input(MESSAGE_PROMPT_COMMAND, hist_PROMPT,
+		output = get_input(MESSAGE_PROMPT_COMMAND,
 		    trivial_completions);
 	else {
 		char *arg_str, *prefix;
@@ -5596,10 +5586,10 @@ cmd_prompt(int interactive, struct cmdarg **args)
 			query = sbuf_new(prefix - arg_str);
 			sbuf_nconcat(query, arg_str, prefix - arg_str);
 			output = get_more_input(sbuf_get(query), prefix,
-			    hist_PROMPT, BASIC, trivial_completions);
+			    BASIC, trivial_completions);
 			sbuf_free(query);
 		} else {
-			output = get_input(arg_str, hist_PROMPT,
+			output = get_input(arg_str,
 			    trivial_completions);
 		}
 	}
