@@ -299,7 +299,6 @@ struct rp_defaults {
 	int bar_timeout;
 	int bar_border_width;
 	int bar_in_padding;
-	int bar_sticky;
 
 	int frame_indicator_timeout;
 	int frame_resize_unit;
@@ -327,8 +326,6 @@ struct rp_defaults {
 	/* Which name to use: wm_name, res_name, res_class. */
 	int win_name;
 
-	int startup_message;
-
 	/*
 	 * Decides whether the window list is displayed in a row or a column.
 	 */
@@ -336,12 +333,6 @@ struct rp_defaults {
 
 	/* Pointer warping toggle. */
 	int warp;
-
-	int history_size;
-	/* remove older history when adding the same again */
-	int history_compaction;
-	/* expand ! when compiled with libhistory */
-	int history_expansion;
 
 	char *frame_selectors;
 

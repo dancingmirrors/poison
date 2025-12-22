@@ -624,8 +624,6 @@ clean_up(void)
 	rp_vscreen *vcur;
 	struct list_head *iter, *tmp, *iter2, *tmp2;
 
-	history_save();
-
 	free_keymaps();
 	free_aliases();
 	free_user_commands();

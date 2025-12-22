@@ -25,28 +25,6 @@
 
 #include "poison.h"
 
-static char *
-get_history_filename(void)
-{
-	const char *homedir;
-	char *filename;
-
-	homedir = get_homedir();
-
-	if (homedir) {
-		struct sbuf *buf;
-
-		buf = sbuf_new(0);
-		sbuf_printf(buf, "%s/.config/poison/%s", homedir,
-		    HISTORY_FILE);
-		filename = sbuf_free_struct(buf);
-	} else {
-		filename = xstrdup(HISTORY_FILE);
-	}
-
-	return filename;
-}
-
 static const char *
 extract_shell_part(const char *p)
 {
@@ -114,100 +92,29 @@ history_add_upto(int history_id, const char *item, size_t max)
 void
 history_add(int history_id, const char *item)
 {
-	history_add_upto(history_id, item, defaults.history_size);
+	history_add_upto(history_id, item, 0);
 }
 
 void
 history_load(void)
 {
-	char *filename;
-	FILE *f;
-	char *line = NULL;
-	size_t s = 0;
-	ssize_t linelen;
 	int id;
 
+	/* Initialize history structures but don't load from file */
 	for (id = hist_NONE; id < hist_COUNT; id++) {
 		INIT_LIST_HEAD(&histories[id].head);
 		histories[id].current = &histories[id].head;
 		histories[id].count = 0;
 	}
 
-	filename = get_history_filename();
-	if (!filename)
-		return;
-
-	f = fopen(filename, "r");
-	if (!f) {
-		PRINT_DEBUG(("could not load history from %s: %s", filename,
-		    strerror(errno)));
-		free(filename);
-		return;
-	}
-	while ((linelen = getline(&line, &s, f)) >= 0) {
-		while (linelen > 0 && (line[linelen - 1] == '\n' ||
-		    line[linelen - 1] == '\r')) {
-			line[--linelen] = '\0';
-		}
-		if (linelen == 0)
-			continue;
-		/* defaults.history_size might be only set later */
-		history_add_upto(hist_COMMAND, line, INT_MAX);
-	}
-	free(line);
-	if (ferror(f)) {
-		PRINT_DEBUG(("error reading history %s: %s\n", filename,
-		    strerror(errno)));
-		fclose(f);
-		free(filename);
-		return;
-	}
-	if (fclose(f))
-		PRINT_DEBUG(("error reading %s: %s\n", filename,
-		    strerror(errno)));
-	free(filename);
+	/* History is disabled - do not load from file */
 }
 
 void
 history_save(void)
 {
-	char *filename;
-	FILE *f;
-	struct history_item *item;
-
-	if (!defaults.history_size)
-		return;
-
-	filename = get_history_filename();
-	if (!filename)
-		return;
-
-	f = fopen(filename, "w");
-	if (!f) {
-		PRINT_DEBUG(("could not write history to %s: %s\n", filename,
-		    strerror(errno)));
-		free(filename);
-		return;
-	}
-	if (fchmod(fileno(f), 0600) == -1)
-		warn("could not change mode to 0600 on %s", filename);
-
-	list_for_each_entry(item, &histories[hist_COMMAND].head, node) {
-		fputs(item->line, f);
-		putc('\n', f);
-	}
-
-	if (ferror(f)) {
-		PRINT_DEBUG(("error writing history to %s: %s\n", filename,
-		    strerror(errno)));
-		fclose(f);
-		free(filename);
-		return;
-	}
-	if (fclose(f))
-		PRINT_DEBUG(("error writing history to %s: %s\n", filename,
-		    strerror(errno)));
-	free(filename);
+	/* History is disabled - do nothing */
+	return;
 }
 
 void

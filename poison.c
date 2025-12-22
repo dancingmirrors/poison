@@ -122,46 +122,6 @@ read_startup_files(const char *alt_rcfile)
 	return 0;
 }
 
-/*
- * Odd that we spend so much code on making sure the silly welcome message is
- * correct.  Oh well...
- */
-static void
-show_welcome_message(void)
-{
-	rp_action *help_action;
-	char *prefix, *help;
-	rp_keymap *map;
-
-	prefix = keysym_to_string(prefix_key.sym, prefix_key.state);
-
-	map = find_keymap(ROOT_KEYMAP);
-
-	/* Find the help key binding. */
-	help_action = find_keybinding_by_action("help " ROOT_KEYMAP, map);
-	if (help_action)
-		help = keysym_to_string(help_action->key, help_action->state);
-	else
-		help = NULL;
-
-
-	if (help) {
-		/*
-		 * A little kludge to use ? instead of `question' for the help key.
-		 */
-		if (!strcmp(help, "question"))
-			marked_message_printf(0, 0, MESSAGE_WELCOME, prefix, "?");
-		else
-			marked_message_printf(0, 0, MESSAGE_WELCOME, prefix, help);
-
-		free(help);
-	} else {
-		marked_message_printf(0, 0, MESSAGE_WELCOME, prefix, ":help");
-	}
-
-	free(prefix);
-}
-
 static void
 init_defaults(void)
 {
@@ -182,7 +142,6 @@ init_defaults(void)
 	defaults.bar_timeout = 3;
 	defaults.bar_border_width = 0;
 	defaults.bar_in_padding = 1;
-	defaults.bar_sticky = 0;
 
 	defaults.frame_indicator_timeout = 1;
 	defaults.frame_resize_unit = 10;
@@ -211,11 +170,8 @@ init_defaults(void)
 	defaults.resize_fmt = xstrdup("Resize frame (%Wx%H)");
 
 	defaults.win_name = WIN_NAME_RES_NAME;
-	defaults.startup_message = 1;
 	defaults.warp = 0;
 	defaults.window_list_style = STYLE_COLUMN;
-
-	defaults.history_size = 0;
 	defaults.frame_selectors = xstrdup("");
 	defaults.maxundos = 20;
 
@@ -387,7 +343,6 @@ main(int argc, char *argv[])
 	update_modifier_map();
 	init_user_commands();
 	initialize_default_keybindings();
-	history_load();
 	init_bar();
 
 	scanwins();
@@ -401,10 +356,6 @@ main(int argc, char *argv[])
 		if ((result = command(0, "hsplit")))
 			cmdret_free(result);
 	}
-
-	/* Indicate to the user that we have booted. */
-	if (defaults.startup_message)
-		show_welcome_message();
 
 	/* If no window has focus, give the key_window focus. */
 	if (current_window() == NULL)

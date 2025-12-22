@@ -126,14 +126,6 @@ init_bar(void)
 void
 hide_bar(rp_screen *s, int force)
 {
-	if (!s->full_screen_win && defaults.bar_sticky && !force) {
-		redraw_sticky_bar_text(0);
-
-		if (s == screen_primary())
-			return;
-		/* otherwise, we need to hide this secondary screen's bar */
-	}
-
 	s->bar_is_raised = BAR_IS_HIDDEN;
 	XUnmapWindow(dpy, s->bar_window);
 
@@ -245,11 +237,6 @@ bar_y(rp_screen *s, int height)
 int
 sticky_bar_height(rp_screen *s)
 {
-	if (defaults.bar_sticky)
-		return FONT_HEIGHT(s) +
-		    (defaults.bar_border_width * 2) +
-		    (defaults.bar_y_padding * 2);
-
 	return 0;
 }
 
@@ -287,9 +274,7 @@ redraw_sticky_bar_text(int force)
 	int diff = 0, len, cmd = 0, skip = 0, xftx = 0, x;
 	int width, height;
 
-	if (!defaults.bar_sticky || (!force && (s->full_screen_win ||
-	    bar_time_left())))
-		return;
+	return;
 
 	/*
 	 * If we were showing a message or window list before, make sure we
@@ -809,10 +794,7 @@ correct_mark(int msg_len, int *mark_start, int *mark_end)
 static void
 prepare_bar(rp_screen *s, int width, int height, int bar_type)
 {
-	if (defaults.bar_sticky)
-		width = s->width - (defaults.bar_border_width * 2);
-	else
-		width = width < s->width ? width : s->width;
+	width = width < s->width ? width : s->width;
 	if (!defaults.bar_in_padding)
 		width -= defaults.padding_right + defaults.padding_left;
 	height = height < s->height ? height : s->height;

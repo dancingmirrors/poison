@@ -419,14 +419,6 @@ update_input_window(rp_screen *s, rp_input_line *line)
 	if (total_width < defaults.input_window_size + prompt_width)
 		total_width = defaults.input_window_size + prompt_width;
 
-	if (defaults.bar_sticky) {
-		XWindowAttributes attr;
-		XGetWindowAttributes(dpy, s->bar_window, &attr);
-
-		if (total_width < attr.width)
-			total_width = attr.width;
-	}
-
 	XMoveResizeWindow(dpy, s->input_window,
 	    bar_x(s, total_width), bar_y(s, height), total_width,
 	    (FONT_HEIGHT(s) + defaults.bar_y_padding * 2));
@@ -553,10 +545,6 @@ get_more_input(char *prompt, char *preinput, int history_id,
 		XUninstallColormap(dpy, s->def_cmap);
 		XInstallColormap(dpy, current_window()->colormap);
 	}
-
-	/* Re-show the sticky bar if we hid it earlier */
-	if (defaults.bar_sticky)
-		hide_bar(s, 0);
 
 	XUnmapWindow(dpy, s->input_window);
 

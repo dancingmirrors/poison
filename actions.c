@@ -130,7 +130,7 @@ static cmdret *set_barbordercolor(struct cmdarg **args);
 static cmdret *set_bargravity(struct cmdarg **args);
 static cmdret *set_barinpadding(struct cmdarg **args);
 static cmdret *set_barpadding(struct cmdarg **args);
-static cmdret *set_barsticky(struct cmdarg **args);
+
 static cmdret *set_bgcolor(struct cmdarg **args);
 static cmdret *set_border(struct cmdarg **args);
 static cmdret *set_bwcolor(struct cmdarg **args);
@@ -141,7 +141,7 @@ static cmdret *set_framemsgwait(struct cmdarg **args);
 static cmdret *set_framesels(struct cmdarg **args);
 static cmdret *set_fwcolor(struct cmdarg **args);
 static cmdret *set_gap(struct cmdarg **args);
-static cmdret *set_historysize(struct cmdarg **args);
+
 static cmdret *set_ignoreresizehints(struct cmdarg **args);
 static cmdret *set_infofmt(struct cmdarg **args);
 static cmdret *set_inputwidth(struct cmdarg **args);
@@ -153,7 +153,7 @@ static cmdret *set_padding(struct cmdarg **args);
 static cmdret *set_resizefmt(struct cmdarg **args);
 static cmdret *set_resizeunit(struct cmdarg **args);
 static cmdret *set_rudeness(struct cmdarg **args);
-static cmdret *set_startupmessage(struct cmdarg **args);
+
 static cmdret *set_stickyfmt(struct cmdarg **args);
 static cmdret *set_topkmap(struct cmdarg **args);
 static cmdret *set_transgravity(struct cmdarg **args);
@@ -313,7 +313,7 @@ init_set_vars(void)
 	add_set_var("barinpadding", set_barinpadding, 1, "", arg_NUMBER);
 	add_set_var("barpadding", set_barpadding, 2, "", arg_NUMBER, "",
 	    arg_NUMBER);
-	add_set_var("barsticky", set_barsticky, 1, "", arg_NUMBER);
+
 	add_set_var("bgcolor", set_bgcolor, 1, "", arg_STRING);
 	add_set_var("border", set_border, 1, "", arg_NUMBER);
 	add_set_var("bwcolor", set_bwcolor, 1, "", arg_STRING);
@@ -324,7 +324,7 @@ init_set_vars(void)
 	add_set_var("framesels", set_framesels, 1, "", arg_STRING);
 	add_set_var("fwcolor", set_fwcolor, 1, "", arg_STRING);
 	add_set_var("gap", set_gap, 1, "", arg_NUMBER);
-	add_set_var("historysize", set_historysize, 1, "", arg_NUMBER);
+
 	add_set_var("ignoreresizehints", set_ignoreresizehints, 1, "",
 	    arg_NUMBER);
 	add_set_var("infofmt", set_infofmt, 1, "", arg_REST);
@@ -338,7 +338,7 @@ init_set_vars(void)
 	add_set_var("resizefmt", set_resizefmt, 1, "", arg_REST);
 	add_set_var("resizeunit", set_resizeunit, 1, "", arg_NUMBER);
 	add_set_var("rudeness", set_rudeness, 1, "", arg_NUMBER);
-	add_set_var("startupmessage", set_startupmessage, 1, "", arg_NUMBER);
+
 	add_set_var("stickyfmt", set_stickyfmt, 1, "", arg_REST);
 	add_set_var("topkmap", set_topkmap, 1, "", arg_STRING);
 	add_set_var("transgravity", set_transgravity, 1, "", arg_GRAVITY);
@@ -3793,19 +3793,7 @@ update_gc(rp_screen * s)
 	    GCSubwindowMode, &gcv);
 }
 
-static cmdret *
-set_historysize(struct cmdarg **args)
-{
-	if (args[0] == NULL)
-		return cmdret_new(RET_SUCCESS, "%d", defaults.history_size);
 
-	if (ARG(0, number) < 0)
-		return cmdret_new(RET_FAILURE, "set historysize: %s",
-		    invalid_negative_arg);
-
-	defaults.history_size = ARG(0, number);
-	return cmdret_new(RET_SUCCESS, NULL);
-}
 
 static cmdret *
 set_font(struct cmdarg **args)
@@ -4589,19 +4577,7 @@ cmd_restart(int interactive, struct cmdarg **args)
 	return cmdret_new(RET_SUCCESS, NULL);
 }
 
-static cmdret *
-set_startupmessage(struct cmdarg **args)
-{
-	if (args[0] == NULL)
-		return cmdret_new(RET_SUCCESS, "%d", defaults.startup_message);
 
-	if (ARG(0, number) != 0 && ARG(0, number) != 1)
-		return cmdret_new(RET_FAILURE,
-		    "set startupmessage: invalid argument");
-
-	defaults.startup_message = ARG(0, number);
-	return cmdret_new(RET_SUCCESS, NULL);
-}
 
 cmdret *
 cmd_focuslast(int interactive, struct cmdarg **args)
@@ -4667,30 +4643,6 @@ set_barpadding(struct cmdarg **args)
 	return cmdret_new(RET_SUCCESS, NULL);
 }
 
-static cmdret *
-set_barsticky(struct cmdarg **args)
-{
-	rp_screen *s;
-
-	if (args[0] == NULL)
-		return cmdret_new(RET_SUCCESS, "%d", defaults.bar_sticky);
-
-	if (ARG(0, number) != 0 && ARG(0, number) != 1)
-		return cmdret_new(RET_FAILURE,
-		    "set barsticky: invalid argument");
-
-	mark_edge_frames();
-
-	defaults.bar_sticky = ARG(0, number);
-
-	list_for_each_entry(s, &rp_screens, node) {
-		hide_bar(s, 0);
-		screen_update_workarea(s);
-		screen_update_frames(s);
-	}
-
-	return cmdret_new(RET_SUCCESS, NULL);
-}
 
 static cmdret *
 set_stickyfmt(struct cmdarg **args)
