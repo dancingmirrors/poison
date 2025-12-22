@@ -11,7 +11,7 @@ CFLAGS+=	-O2 -Wall -Wextra -Wno-unused-parameter \
 		-Wunused -Wmissing-prototypes -Wstrict-prototypes \
 		`pkg-config --cflags ${PKGLIBS}` \
 		-DVERSION=\"${VERSION}\"
-LDFLAGS+=	`pkg-config --libs ${PKGLIBS}`
+LDFLAGS+=	`pkg-config --libs ${PKGLIBS}` -lm
 
 COMMONER_PKGLIBS=	x11 xcomposite xdamage xfixes xext xpresent egl gl xshmfence
 COMMONER_CFLAGS=	-O3 -Wall -Wextra `pkg-config --cflags ${COMMONER_PKGLIBS}` \

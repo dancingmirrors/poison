@@ -185,3 +185,87 @@ start_compositor(void)
 	}
 	/* Parent continues */
 }
+
+/*
+ * Expand environment variables in a string.
+ * Supports $VAR and ${VAR} syntax.
+ * Returns a newly allocated string that must be freed by the caller.
+ */
+char *
+expand_env_vars(const char *str)
+{
+	char *result;
+	const char *p;
+	size_t len, result_len, result_cap;
+
+	if (!str)
+		return NULL;
+
+	/* Initial allocation */
+	result_cap = strlen(str) * 2;
+	result = xmalloc(result_cap);
+	result_len = 0;
+
+	p = str;
+	while (*p) {
+		if (*p == '$') {
+			const char *var_start;
+			char *var_name;
+			const char *var_value;
+			size_t var_name_len;
+			int braced = 0;
+
+			p++;  /* Skip $ */
+
+			/* Check for ${VAR} syntax */
+			if (*p == '{') {
+				braced = 1;
+				p++;
+			}
+
+			var_start = p;
+
+			/* Extract variable name */
+			if (braced) {
+				while (*p && *p != '}')
+					p++;
+				var_name_len = p - var_start;
+				if (*p == '}')
+					p++;  /* Skip closing } */
+			} else {
+				while (*p && (isalnum((unsigned char)*p) || *p == '_'))
+					p++;
+				var_name_len = p - var_start;
+			}
+
+			if (var_name_len > 0) {
+				var_name = xmalloc(var_name_len + 1);
+				memcpy(var_name, var_start, var_name_len);
+				var_name[var_name_len] = '\0';
+
+				var_value = getenv(var_name);
+				if (var_value) {
+					len = strlen(var_value);
+					/* Ensure we have space */
+					while (result_len + len >= result_cap) {
+						result_cap *= 2;
+						result = xrealloc(result, result_cap);
+					}
+					memcpy(result + result_len, var_value, len);
+					result_len += len;
+				}
+				free(var_name);
+			}
+		} else {
+			/* Regular character */
+			if (result_len + 1 >= result_cap) {
+				result_cap *= 2;
+				result = xrealloc(result, result_cap);
+			}
+			result[result_len++] = *p++;
+		}
+	}
+
+	result[result_len] = '\0';
+	return result;
+}

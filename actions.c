@@ -32,6 +32,7 @@
 #include <dirent.h>
 
 #include "poison.h"
+#include "wallpaper.h"
 
 /* arg_REST and arg_SHELLCMD eat the rest of the input. */
 enum argtype {
@@ -271,6 +272,7 @@ static cmdret *cmd_version(int interactive, struct cmdarg **args);
 static cmdret *cmd_windows(int interactive, struct cmdarg **args);
 static cmdret *cmd_windowselector(int interactive, struct cmdarg **args);
 static cmdret *cmd_applauncher(int interactive, struct cmdarg **args);
+static cmdret *cmd_wallpaper(int interactive, struct cmdarg **args);
 
 static void
 add_set_var(char *name, cmdret *(*fn)(struct cmdarg **), int nargs, ...)
@@ -571,6 +573,8 @@ init_user_commands(void)
                     "", arg_REST);
 	add_command("windowselector",	cmd_windowselector, 0, 0, 0);
 	add_command("applauncher",	cmd_applauncher, 0, 0, 0);
+	add_command("wallpaper",	cmd_wallpaper,	1, 1, 1,
+	            "Wallpaper: ", arg_REST);
 	/* @end (tag required for genrpbindings) */
 
 	init_set_vars();
@@ -6100,4 +6104,114 @@ cmd_commands(int interactive, struct cmdarg **args)
 	ret = cmdret_new(RET_SUCCESS, "%s", sbuf_get(sb));
 	sbuf_free(sb);
 	return ret;
+}
+
+cmdret *
+cmd_wallpaper(int interactive, struct cmdarg **args)
+{
+	struct wallpaper_state state;
+	char *arg_str = ARG_STRING(0);
+	char *token, *saveptr;
+	char *arg_copy;
+	int ret;
+
+	wallpaper_init(&state, dpy, DefaultScreen(dpy));
+
+	/* Parse arguments: [x] [y] [hgradient|vgradient] color [color2] [scale-height N] [tile FILE] [emblem FILE] image_file */
+	arg_copy = xstrdup(arg_str);
+	token = strtok_r(arg_copy, " \t", &saveptr);
+
+	while (token) {
+		if (strcmp(token, "x") == 0) {
+			state.center_x = 1;
+		} else if (strcmp(token, "y") == 0) {
+			state.center_y = 1;
+		} else if (strcmp(token, "hgradient") == 0) {
+			state.vertical_gradient = 0;
+		} else if (strcmp(token, "vgradient") == 0) {
+			state.vertical_gradient = 1;
+		} else if (strcmp(token, "scale-height") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.scale_height_percent = atof(token);
+		} else if (strcmp(token, "scale-width") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.scale_width_percent = atof(token);
+		} else if (strcmp(token, "geometry") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.geometry = xstrdup(token);
+		} else if (strcmp(token, "avoid") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.avoid = xstrdup(token);
+		} else if (strcmp(token, "tile") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.tile_file = expand_env_vars(token);
+		} else if (strcmp(token, "tile-alpha") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.tile_alpha = atoi(token);
+		} else if (strcmp(token, "emblem") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.emblem_file = expand_env_vars(token);
+		} else if (strcmp(token, "emblem-alpha") == 0) {
+			token = strtok_r(NULL, " \t", &saveptr);
+			if (token)
+				state.emblem_alpha = atoi(token);
+		} else if (strcmp(token, "emboss") == 0) {
+			state.emboss = 1;
+		} else if (token[0] == '#' || token[0] == '/') {
+			/* Color or file path */
+			if (token[0] == '#') {
+				if (!state.color1)
+					state.color1 = xstrdup(token);
+				else
+					state.color2 = xstrdup(token);
+			} else {
+				/* Absolute file path - this is the main image */
+				state.image_file = expand_env_vars(token);
+			}
+		} else if (token[0] == '$') {
+			/* Environment variable path */
+			state.image_file = expand_env_vars(token);
+		} else {
+			/* Could be a color name or relative path */
+			if (!state.image_file && !state.color1) {
+				/* First non-option is color */
+				state.color1 = xstrdup(token);
+			} else if (!state.image_file && state.color1 && !state.color2) {
+				/* Check if it's a file or second color */
+				char *expanded = expand_env_vars(token);
+				if (access(expanded, R_OK) == 0) {
+					state.image_file = expanded;
+				} else {
+					free(expanded);
+					state.color2 = xstrdup(token);
+				}
+			} else if (!state.image_file) {
+				/* Must be the image file */
+				state.image_file = expand_env_vars(token);
+			}
+		}
+
+		token = strtok_r(NULL, " \t", &saveptr);
+	}
+
+	free(arg_copy);
+
+	/* Apply default color if none specified */
+	if (!state.color1)
+		state.color1 = xstrdup("black");
+
+	ret = wallpaper_apply(&state);
+	wallpaper_free(&state);
+
+	if (ret < 0)
+		return cmdret_new(RET_FAILURE, "wallpaper: failed to set wallpaper");
+
+	return cmdret_new(RET_SUCCESS, NULL);
 }
