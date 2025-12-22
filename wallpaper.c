@@ -138,7 +138,7 @@ static unsigned char *create_gradient(struct wallpaper_state *state)
     return buffer;
 }
 
-/* Simple bilinear scaling */
+/* Bilinear interpolation scaling */
 static unsigned char *scale_image(unsigned char *src, int src_w, int src_h,
                                   int dest_w, int dest_h)
 {
@@ -155,21 +155,34 @@ static unsigned char *scale_image(unsigned char *src, int src_w, int src_h,
             double src_y = (double) y * src_h / dest_h;
             int sx = (int) src_x;
             int sy = (int) src_y;
+            double fx = src_x - sx;
+            double fy = src_y - sy;
 
-            /* Clamp to source bounds */
-            if (sx >= src_w - 1)
-                sx = src_w - 2;
-            if (sy >= src_h - 1)
-                sy = src_h - 2;
+            /* Clamp to source bounds to ensure sx+1 and sy+1 are valid */
             if (sx < 0)
                 sx = 0;
             if (sy < 0)
                 sy = 0;
+            if (sx >= src_w - 1)
+                sx = (src_w > 1) ? src_w - 2 : 0;
+            if (sy >= src_h - 1)
+                sy = (src_h > 1) ? src_h - 2 : 0;
 
-            /* Simple nearest neighbor for now */
+            /* Bilinear interpolation */
             for (c = 0; c < 4; c++) {
-                dest[(y * dest_w + x) * 4 + c] =
-                    src[(sy * src_w + sx) * 4 + c];
+                int sx1 = (sx + 1 < src_w) ? sx + 1 : sx;
+                int sy1 = (sy + 1 < src_h) ? sy + 1 : sy;
+
+                double p00 = src[(sy * src_w + sx) * 4 + c];
+                double p10 = src[(sy * src_w + sx1) * 4 + c];
+                double p01 = src[(sy1 * src_w + sx) * 4 + c];
+                double p11 = src[(sy1 * src_w + sx1) * 4 + c];
+
+                double p0 = p00 * (1.0 - fx) + p10 * fx;
+                double p1 = p01 * (1.0 - fx) + p11 * fx;
+                double val = p0 * (1.0 - fy) + p1 * fy;
+
+                dest[(y * dest_w + x) * 4 + c] = (unsigned char) val;
             }
         }
     }
