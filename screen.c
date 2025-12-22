@@ -310,7 +310,8 @@ init_screens(void)
 static void
 init_rat_cursor(rp_screen *s)
 {
-	s->rat = XCreateFontCursor(dpy, XC_icon);
+	s->rat = XCreateFontCursor(dpy, XC_left_ptr);
+	XDefineCursor(dpy, s->root, s->rat);
 }
 
 static void
