@@ -17,9 +17,9 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_FORMAT_H
-#define _SDORFEHS_FORMAT_H 1
+#ifndef _POISON_FORMAT_H
+#define _POISON_FORMAT_H 1
 
 void format_string(char *fmt, rp_window_elem *win_elem, struct sbuf *buffer);
 
-#endif	/* _SDORFEHS_FORMAT_H */
+#endif	/* _POISON_FORMAT_H */

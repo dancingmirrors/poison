@@ -21,7 +21,7 @@
 #include <err.h>
 #include <string.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 #define VERTICALLY 0
 #define HORIZONTALLY 1

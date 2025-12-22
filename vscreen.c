@@ -17,7 +17,7 @@
  */
 
 #include <err.h>
-#include "sdorfehs.h"
+#include "poison.h"
 
 rp_vscreen *vscreen_next(void);
 rp_vscreen *vscreen_prev(void);
@@ -312,15 +312,8 @@ vscreen_move_window(rp_vscreen *to, rp_window *w)
 	if (f)
 		f->win_number = EMPTY;
 
-#if 0
-	numset_release(from->numset, we->number);
-	list_del(&we->node);
-
-	we->number = numset_request(to->numset);
-#else
 	/* Keep the same number when moving between vscreens */
 	list_del(&we->node);
-#endif
 	vscreen_insert_window(&to->mapped_windows, we);
 
 	if (to == rp_current_vscreen)
@@ -491,20 +484,6 @@ vscreen_find_window(struct list_head *list, rp_window *win)
 	return NULL;
 }
 
-rp_window_elem *
-vscreen_find_window_by_number(rp_vscreen *v, int num)
-{
-	rp_window_elem *cur;
-
-	list_for_each_entry(cur, &v->mapped_windows, node) {
-		if (cur->number == num)
-			return cur;
-	}
-
-	return NULL;
-
-}
-
 /*
  * Insert a window_elem into the window list.
  * Use FIFO ordering (add to tail) instead of number-based ordering.
@@ -512,17 +491,6 @@ vscreen_find_window_by_number(rp_vscreen *v, int num)
 void
 vscreen_insert_window(struct list_head *h, rp_window_elem *w)
 {
-#if 0
-	rp_window_elem *cur;
-
-	list_for_each_entry(cur, h, node) {
-		if (cur->number > w->number) {
-			list_add_tail(&w->node, &cur->node);
-			return;
-		}
-	}
-#endif
-
 	/* Simply add to tail for FIFO ordering */
 	list_add_tail(&w->node, h);
 }
@@ -576,9 +544,6 @@ vscreen_map_window(rp_vscreen *v, rp_window *win)
 
 	we = vscreen_find_window(&v->unmapped_windows, win);
 	if (we) {
-#if 0
-		we->number = numset_request(v->numset);
-#else
 		/*
 		 * Use simple static global counter for vscreen window elem number.
 		 * This is separate from rp_window->number and used for display/ordering.
@@ -587,7 +552,6 @@ vscreen_map_window(rp_vscreen *v, rp_window *win)
 		 */
 		static int vscreen_window_counter = 0;
 		we->number = vscreen_window_counter++;
-#endif
 		list_del(&we->node);
 		vscreen_insert_window(&v->mapped_windows, we);
 	}
@@ -600,9 +564,6 @@ vscreen_unmap_window(rp_vscreen *v, rp_window *win)
 
 	we = vscreen_find_window(&v->mapped_windows, win);
 	if (we) {
-#if 0
-		numset_release(v->numset, we->number);
-#endif
 		list_move_tail(&we->node, &v->unmapped_windows);
 	}
 }
@@ -757,15 +718,8 @@ vscreens_merge(rp_vscreen *from, rp_vscreen *to)
 
 	/* Move the mapped windows. */
 	list_for_each_safe_entry(cur, iter, tmp, &from->mapped_windows, node) {
-#if 0
-		numset_release(from->numset, cur->number);
-		list_del(&cur->node);
-
-		cur->number = numset_request(to->numset);
-#else
 		/* Keep the same number when merging vscreens */
 		list_del(&cur->node);
-#endif
 		vscreen_insert_window(&to->mapped_windows, cur);
 	}
 }

@@ -16,7 +16,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 #include <ctype.h>
 #include <err.h>

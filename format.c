@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sdorfehs.h"
+#include "poison.h"
 
 /* Function prototypes for format char expanders. */
 #define RP_FMT(fn) static void fmt_ ## fn (rp_window_elem *elem, struct sbuf *buf)
@@ -162,12 +162,8 @@ fmt_name(rp_window_elem *win_elem, struct sbuf *buf)
 static void
 fmt_number(rp_window_elem *win_elem, struct sbuf *buf)
 {
-#if 0
-	sbuf_printf_concat(buf, "%d", win_elem->number);
-#else
 	/* Window numbering disabled - output nothing */
 	sbuf_copy(buf, "");
-#endif
 }
 
 static void

@@ -17,10 +17,10 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_ACTIONS_H
-#define _SDORFEHS_ACTIONS_H 1
+#ifndef _POISON_ACTIONS_H
+#define _POISON_ACTIONS_H 1
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /* The structure returned by a command. */
 typedef struct cmdret {
@@ -46,4 +46,4 @@ rp_action *find_keybinding_by_action(char *action, rp_keymap *map);
 int spawn(char *cmd, rp_frame *frame);
 int vspawn(char *cmd, rp_frame *frame, rp_vscreen *vscreen);
 
-#endif	/* ! _SDORFEHS_ACTIONS_H */
+#endif	/* ! _POISON_ACTIONS_H */

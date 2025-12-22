@@ -1,5 +1,5 @@
 /*
- * communications.c -- Send commands to a running copy of sdorfehs.
+ * communications.c -- Send commands to a running copy of poison.
  * Copyright (C) 2000, 2001, 2002, 2003, 2004 Shawn Betts <sabetts@vcn.bc.ca>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 #define BUFSZ 1024
 

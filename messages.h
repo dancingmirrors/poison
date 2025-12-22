@@ -17,8 +17,8 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_MESSAGES_H
-#define _SDORFEHS_MESSAGES_H 1
+#ifndef _POISON_MESSAGES_H
+#define _POISON_MESSAGES_H 1
 
 #define MESSAGE_NO_OTHER_WINDOW		"No other window"
 #define MESSAGE_NO_OTHER_FRAME		"No other frame"
@@ -48,4 +48,4 @@
 
 #define EMPTY_FRAME_MESSAGE		"Current Frame"
 
-#endif	/* ! _SDORFEHS_MESSAGES_H */
+#endif	/* ! _POISON_MESSAGES_H */

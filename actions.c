@@ -30,7 +30,7 @@
 #include <X11/extensions/XTest.h>
 #include <sys/ioctl.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /* arg_REST and arg_SHELLCMD eat the rest of the input. */
 enum argtype {
@@ -224,7 +224,6 @@ static cmdret *cmd_newkmap(int interactive, struct cmdarg **args);
 static cmdret *cmd_next(int interactive, struct cmdarg **args);
 static cmdret *cmd_nextframe(int interactive, struct cmdarg **args);
 static cmdret *cmd_nextscreen(int interactive, struct cmdarg **args);
-static cmdret *cmd_number(int interactive, struct cmdarg **args);
 static cmdret *cmd_only(int interactive, struct cmdarg **args);
 static cmdret *cmd_other(int interactive, struct cmdarg **args);
 static cmdret *cmd_prev(int interactive, struct cmdarg **args);
@@ -248,7 +247,6 @@ static cmdret *cmd_rename(int interactive, struct cmdarg **args);
 static cmdret *cmd_resize(int interactive, struct cmdarg **args);
 static cmdret *cmd_restart(int interactive, struct cmdarg **args);
 static cmdret *cmd_sdump(int interactive, struct cmdarg **args);
-static cmdret *cmd_select(int interactive, struct cmdarg **args);
 static cmdret *cmd_set(int interactive, struct cmdarg **args);
 static cmdret *cmd_setenv(int interactive, struct cmdarg **args);
 static cmdret *cmd_sfdump(int interactive, struct cmdarg **args);
@@ -268,13 +266,6 @@ static cmdret *cmd_unstick(int interactive, struct cmdarg **args);
 static cmdret *cmd_vsplit(int interactive, struct cmdarg **args);
 static cmdret *cmd_verbexec(int interactive, struct cmdarg **args);
 static cmdret *cmd_version(int interactive, struct cmdarg **args);
-static cmdret *cmd_vmove(int interactive, struct cmdarg **args);
-static cmdret *cmd_vnext(int interactive, struct cmdarg **args);
-static cmdret *cmd_vother(int interactive, struct cmdarg **args);
-static cmdret *cmd_vprev(int interactive, struct cmdarg **args);
-static cmdret *cmd_vrename(int interactive, struct cmdarg **args);
-static cmdret *cmd_vscreens(int interactive, struct cmdarg **args);
-static cmdret *cmd_vselect(int interactive, struct cmdarg **args);
 static cmdret *cmd_windows(int interactive, struct cmdarg **args);
 static cmdret *cmd_windowselector(int interactive, struct cmdarg **args);
 
@@ -498,9 +489,6 @@ init_user_commands(void)
                     "Keymap: ", arg_STRING);
 	add_command("next",		cmd_next,	0, 0, 0);
 	add_command("nextscreen",	cmd_nextscreen,	0, 0, 0);
-	add_command("number",		cmd_number,	2, 1, 1,
-                    "Number: ", arg_NUMBER,
-                    "Number: ", arg_NUMBER);
 	add_command("only",		cmd_only,	0, 0, 0);
 	add_command("other",		cmd_other,	0, 0, 0);
 	add_command("prev",		cmd_prev,	0, 0, 0);
@@ -537,8 +525,6 @@ init_user_commands(void)
                     "", arg_NUMBER);
 	add_command("restart",		cmd_restart,	0, 0, 0);
 	add_command("sdump",		cmd_sdump,	0, 0, 0);
-	add_command("select",		cmd_select,	1, 0, 1,
-                    "Select window: ", arg_REST);
 	add_command("set",		cmd_set,	2, 0, 0,
                     "", arg_VARIABLE,
                     "", arg_REST);
@@ -575,16 +561,6 @@ init_user_commands(void)
 	add_command("verbexec",		cmd_verbexec,	1, 1, 1,
                     "/bin/sh -c ", arg_SHELLCMD);
 	add_command("version",		cmd_version,	0, 0, 0);
-	add_command("vmove",		cmd_vmove,	1, 1, 1,
-	            "Virtual Screen: ", arg_VSCREEN);
-	add_command("vnext",		cmd_vnext,	0, 0, 0);
-	add_command("vother",		cmd_vother,	0, 0, 0);
-	add_command("vprev",		cmd_vprev,	0, 0, 0);
-	add_command("vrename",		cmd_vrename,	1, 1, 1,
-	            "Change virtual screen name to: ", arg_REST);
-	add_command("vscreens",		cmd_vscreens,	0, 0, 0);
-	add_command("vselect",		cmd_vselect,	1, 1, 1,
-	            "Virtual Screen: ", arg_VSCREEN);
 	add_command("vsplit",		cmd_vsplit,	1, 0, 0,
                     "Split: ", arg_STRING);
 	add_command("windows",		cmd_windows,	1, 0, 0,
@@ -1470,76 +1446,6 @@ window_completions(char *str)
 	return list;
 }
 
-/* switch to window number or name */
-cmdret *
-cmd_select(int interactive, struct cmdarg **args)
-{
-	cmdret *ret = NULL;
-	char *str;
-	int n;
-
-	/*
-	 * FIXME: This is manually done because of the kinds of things select
-	 * accepts.
-	 */
-	if (args[0] == NULL)
-		str = get_more_input(MESSAGE_PROMPT_SWITCH_TO_WINDOW, "",
-		    hist_SELECT, SUBSTRING, window_completions);
-	else
-		str = xstrdup(ARG_STRING(0));
-
-	/* User aborted. */
-	if (str == NULL)
-		return cmdret_new(RET_FAILURE, NULL);
-
-	/* Only search if the string contains something to search for. */
-	if (strlen(str) > 0) {
-		if (strlen(str) == 1 && str[0] == '-') {
-			blank_frame(current_frame(rp_current_vscreen));
-			ret = cmdret_new(RET_SUCCESS, NULL);
-		} else if ((n = string_to_positive_int(str)) >= 0) {
-			/* try by number */
-			rp_window_elem *elem = vscreen_find_window_by_number(
-			    rp_current_vscreen, n);
-
-			if (elem) {
-				goto_window(elem->win);
-				ret = cmdret_new(RET_SUCCESS, NULL);
-			} else {
-				if (interactive) {
-					/* show the window list as feedback */
-					show_bar(rp_current_screen,
-					    defaults.window_fmt);
-					ret = cmdret_new(RET_SUCCESS, NULL);
-				} else {
-					ret = cmdret_new(RET_FAILURE,
-					    "select: unknown window number '%d'",
-					    n);
-				}
-			}
-		} else {
-			/* try by name */
-			rp_window *win = find_window_name(str, 1);
-
-			if (!win)
-				win = find_window_name(str, 0);
-
-			if (win) {
-				goto_window(win);
-				ret = cmdret_new(RET_SUCCESS, NULL);
-			} else
-				ret = cmdret_new(RET_FAILURE,
-				    "select: unknown window '%s'", str);
-		}
-	} else
-		/* Silently fail, since the user didn't provide a window spec */
-		ret = cmdret_new(RET_SUCCESS, NULL);
-
-	free(str);
-
-	return ret;
-}
-
 cmdret *
 cmd_rename(int interactive, struct cmdarg **args)
 {
@@ -1991,7 +1897,6 @@ read_window(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 {
 	rp_window *win = NULL;
 	char *name;
-	int n;
 
 	if (s)
 		name = xstrdup(sbuf_get(s));
@@ -1999,18 +1904,10 @@ read_window(struct argspec *spec, struct sbuf *s, struct cmdarg **arg)
 		name = get_input(spec->prompt, hist_WINDOW, window_completions);
 
 	if (name) {
-		/* try by number */
-		if ((n = string_to_positive_int(name)) >= 0) {
-			rp_window_elem *elem = vscreen_find_window_by_number(
-			    rp_current_vscreen, n);
-			if (elem)
-				win = elem->win;
-		} else {
-			/* try by name */
-			win = find_window_name(name, 1);
-			if (win == NULL)
-				win = find_window_name(name, 0);
-		}
+		/* try by name */
+		win = find_window_name(name, 1);
+		if (win == NULL)
+			win = find_window_name(name, 0);
 
 		if (win) {
 			*arg = xmalloc(sizeof(struct cmdarg));
@@ -2843,54 +2740,6 @@ cmd_quit(int interactive, struct cmdarg **args)
 	return cmdret_new(RET_SUCCESS, NULL);
 }
 
-/* Assign a new number to a window ala screen's number command. */
-cmdret *
-cmd_number(int interactive, struct cmdarg **args)
-{
-#if 0
-	/* Window renumbering disabled - numbers are now static */
-	int old_number, new_number;
-	rp_window_elem *other_win, *win;
-
-	/* Gather the args. */
-	new_number = ARG(0, number);
-	if (args[1])
-		win = vscreen_find_window_by_number(rp_current_vscreen,
-		    ARG(1, number));
-	else
-		win = vscreen_find_window(&rp_current_vscreen->mapped_windows,
-		    current_window());
-
-	/* Make the switch. */
-	if (new_number >= 0 && win) {
-		/* Find other window with same number and give it old number. */
-		other_win = vscreen_find_window_by_number(rp_current_vscreen,
-		    new_number);
-		if (other_win != NULL) {
-			old_number = win->number;
-			other_win->number = old_number;
-
-			/* Resort the window in the list */
-			vscreen_resort_window(rp_current_vscreen, other_win);
-		} else {
-			numset_release(rp_current_vscreen->numset, win->number);
-		}
-
-		win->number = new_number;
-		numset_add_num(rp_current_vscreen->numset, new_number);
-
-		/* resort the the window in the list */
-		vscreen_resort_window(rp_current_vscreen, win);
-
-		/* Update the window list. */
-		update_window_names(win->win->vscreen->screen,
-		    defaults.window_fmt);
-	}
-#endif
-
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
 /* Toggle the display of the program bar */
 cmdret *
 cmd_windows(int interactive, struct cmdarg **args)
@@ -3105,16 +2954,7 @@ cmd_windowselector(int interactive, struct cmdarg **args)
 			break;
 
 		default:
-			/* Number keys - select window by number */
-			if (ch >= XK_0 && ch <= XK_9) {
-				int win_num = (ch - XK_0);
-				rp_window_elem *elem = vscreen_find_window_by_number(
-				    rp_current_vscreen, win_num);
-				if (elem) {
-					selected_win = elem->win;
-					show_window_list_with_selection(s, fmt, selected_win);
-				}
-			}
+			/* Ignore other keys */
 			break;
 		}
 	}
@@ -5203,97 +5043,6 @@ set_winliststyle(struct cmdarg **args)
 }
 
 cmdret *
-cmd_vrename(int interactive, struct cmdarg **args)
-{
-	if (screen_find_vscreen_by_name(rp_current_screen, ARG_STRING(0), 1))
-		return cmdret_new(RET_FAILURE, "vrename: duplicate vscreen name");
-	vscreen_rename(rp_current_vscreen, ARG_STRING(0));
-
-	/* Update the vscreen list. */
-	update_vscreen_names(rp_current_screen);
-
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
-cmdret *
-cmd_vselect(int interactive, struct cmdarg **args)
-{
-	rp_vscreen *v;
-
-	v = find_vscreen(ARG_STRING(0));
-	if (v)
-		set_current_vscreen(v);
-	else
-		return cmd_vscreens(interactive, NULL);
-
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
-/* Show all the vscreens, with the current one highlighted. */
-cmdret *
-cmd_vscreens(int interactive, struct cmdarg **args)
-{
-	struct sbuf *vscreen_list = NULL;
-	int dummy;
-	cmdret *ret;
-
-	if (interactive) {
-		rp_screen *s;
-		s = rp_current_screen;
-		ret = cmdret_new(RET_SUCCESS, NULL);
-		if (defaults.bar_timeout == 0 && s->bar_is_raised) {
-			hide_bar(s, 0);
-			return ret;
-		}
-		show_vscreen_bar(s);
-	} else {
-		vscreen_list = sbuf_new(0);
-		get_vscreen_list(rp_current_screen, "\n", vscreen_list, &dummy,
-		    &dummy);
-		ret = cmdret_new(RET_SUCCESS, "%s", sbuf_get(vscreen_list));
-		sbuf_free(vscreen_list);
-	}
-	return ret;
-}
-
-cmdret *
-cmd_vnext(int interactive, struct cmdarg **args)
-{
-	rp_vscreen *v;
-	v = vscreen_next_vscreen(rp_current_vscreen);
-	if (!v)
-		return cmdret_new(RET_FAILURE, "%s", "next vscreen failed");
-
-	set_current_vscreen(v);
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
-cmdret *
-cmd_vprev(int interactive, struct cmdarg **args)
-{
-	rp_vscreen *v;
-	v = vscreen_prev_vscreen(rp_current_vscreen);
-	if (!v)
-		return cmdret_new(RET_FAILURE, "%s", "prev vscreen failed");
-
-	set_current_vscreen(v);
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
-cmdret *
-cmd_vother(int interactive, struct cmdarg **args)
-{
-	rp_vscreen *v;
-	v = screen_last_vscreen(rp_current_screen);
-	if (!v)
-		/* todo: should we just return success here so it's a no-op? */
-		return cmdret_new(RET_FAILURE, "%s", "last vscreen failed");
-
-	set_current_vscreen(v);
-	return cmdret_new(RET_SUCCESS, NULL);
-}
-
-cmdret *
 cmd_addhook(int interactive, struct cmdarg **args)
 {
 	struct list_head *hook;
@@ -6003,24 +5752,6 @@ cmd_getsel(int interactive, struct cmdarg **args)
 	}
 
 	return cmdret_new(RET_FAILURE, "getsel: no X11 selection");
-}
-
-cmdret *
-cmd_vmove(int interactive, struct cmdarg **args)
-{
-	rp_vscreen *v;
-	rp_window *w;
-
-	if ((w = current_window()) == NULL)
-		return cmdret_new(RET_FAILURE, "vmove: no focused window");
-
-	if (!(v = find_vscreen(ARG_STRING(0))))
-		return cmdret_new(RET_FAILURE, "vmove: invalid vscreen");
-
-	vscreen_move_window(v, w);
-	set_current_vscreen(v);
-	set_active_window(w);
-	return cmdret_new(RET_SUCCESS, NULL);
 }
 
 cmdret *

@@ -17,8 +17,8 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_H
-#define _SDORFEHS_H 1
+#ifndef _POISON_H
+#define _POISON_H 1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -99,4 +99,4 @@ do {                                            \
 #include "utf8.h"
 #include "util.h"
 
-#endif	/* ! _SDORFEHS_H */
+#endif	/* ! _POISON_H */

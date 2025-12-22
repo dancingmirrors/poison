@@ -20,23 +20,20 @@ LDFLAGS+=	`pkg-config --libs ${PKGLIBS}`
 #CFLAGS+=	-DSENDCMD_DEBUG=1
 
 BINDIR=		${DESTDIR}$(PREFIX)/bin
-MANDIR?=	${DESTDIR}$(PREFIX)/share/man/man1
 
 SRC!=		ls *.c
 OBJ=		${SRC:.c=.o}
 
-BIN=		sdorfehs
-MAN=		sdorfehs.1
+BIN=		poison
 
-all: sdorfehs
+all: poison
 
-sdorfehs: $(OBJ)
+poison: $(OBJ)
 	$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 install: all
-	mkdir -p $(BINDIR) $(MANDIR)
+	mkdir -p $(BINDIR)
 	install -s $(BIN) $(BINDIR)
-	install -m 644 $(MAN) $(MANDIR)
 
 regress:
 	scan-build $(MAKE)

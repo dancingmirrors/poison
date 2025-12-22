@@ -17,13 +17,13 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_CONF_H
-#define _SDORFEHS_CONF_H 1
+#ifndef _POISON_CONF_H
+#define _POISON_CONF_H 1
 
 #include "data.h"
 #include "actions.h"
 
-#define PROGNAME	"sdorfehs"
+#define PROGNAME	"poison"
 
 /* Use Super_L as escape key by default. */
 #define KEY_PREFIX      XK_Super_L
@@ -117,4 +117,4 @@
 /* The default font */
 #define DEFAULT_XFT_FONT "monospace:size=12"
 
-#endif	/* !_ _SDORFEHS_CONF_H */
+#endif	/* !_ _POISON_CONF_H */

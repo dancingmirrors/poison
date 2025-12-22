@@ -64,7 +64,6 @@ rp_vscreen *screen_last_vscreen(rp_screen *screen);
 void vscreen_rename(rp_vscreen *v, char *name);
 
 rp_window_elem *vscreen_find_window(struct list_head *list, rp_window *win);
-rp_window_elem *vscreen_find_window_by_number(rp_vscreen *g, int num);
 
 void vscreen_move_window(rp_vscreen *to, rp_window *win);
 void vscreens_merge(rp_vscreen *from, rp_vscreen *to);

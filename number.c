@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <err.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /* Keep track of a set of numbers. For frames and windows. */
 struct numset {

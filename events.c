@@ -38,7 +38,7 @@
 #include <X11/Xmd.h>	/* for CARD32. */
 #include <X11/extensions/shape.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /*
  * The event currently being processed. Mostly used in functions from action.c

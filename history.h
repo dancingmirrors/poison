@@ -16,12 +16,12 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_HISTORY_H
-#define _SDORFEHS_HISTORY_H 1
+#ifndef _POISON_HISTORY_H
+#define _POISON_HISTORY_H 1
 
 enum {
 	hist_NONE = 0, hist_COMMAND, hist_SHELLCMD,
-	hist_SELECT, hist_KEYMAP, hist_KEY,
+	hist_KEYMAP, hist_KEY,
 	hist_WINDOW, hist_GRAVITY, hist_VSCREEN,
 	hist_HOOK, hist_VARIABLE, hist_PROMPT,
 	hist_OTHER,
@@ -37,4 +37,4 @@ const char *history_next(int);
 const char *history_previous(int);
 int history_expand_line(int, char *string, char **output);
 
-#endif	/* ! _SDORFEHS_HISTORY_H */
+#endif	/* ! _POISON_HISTORY_H */

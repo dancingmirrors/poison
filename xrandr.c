@@ -20,7 +20,7 @@
 #include <err.h>
 #include <X11/extensions/Xrandr.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 rp_screen *xrandr_screen_output(int rr_output);
 rp_screen *xrandr_screen_crtc(int rr_crtc);

@@ -20,7 +20,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 rp_completions *
 completions_new(completion_fn list_fn, enum completion_styles style)

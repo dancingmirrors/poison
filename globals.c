@@ -16,7 +16,7 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -601,7 +601,7 @@ get_config_dir(void)
 	}
 	closedir(d);
 
-	home_config = xsprintf("%s/sdorfehs", xdg_config);
+	home_config = xsprintf("%s/poison", xdg_config);
 	if (!(d = opendir(home_config))) {
 		if (mkdir(home_config, 0755) == -1)
 			err(1, "failed creating %s", home_config);

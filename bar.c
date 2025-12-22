@@ -30,7 +30,7 @@
 #include <err.h>
 #include <sys/time.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /* A copy of the last message displayed in the message bar. */
 static char *last_msg = NULL;

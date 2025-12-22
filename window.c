@@ -23,7 +23,7 @@
 
 #include <X11/extensions/shape.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 LIST_HEAD(rp_unmapped_window);
 LIST_HEAD(rp_mapped_window);
@@ -343,17 +343,6 @@ find_window_other(rp_vscreen *vscreen)
 void
 insert_into_list(rp_window *win, struct list_head *list)
 {
-#if 0
-	rp_window *cur;
-
-	list_for_each_entry(cur, list, node) {
-		if (cur->number > win->number) {
-			list_add_tail(&win->node, &cur->node);
-			return;
-		}
-	}
-#endif
-
 	/* Simply add to tail for FIFO ordering */
 	list_add_tail(&win->node, list);
 }
@@ -445,14 +434,6 @@ give_window_focus(rp_window *win, rp_window *last_win)
 
 	/* Clean up any stale withdrawn windows on focus change */
 	cleanup_withdrawn_windows();
-
-#if 0
-	/* Clean up phantom mapped windows that no longer exist */
-	cleanup_phantom_windows();
-
-	/* Compact window numbers to eliminate gaps */
-	compact_window_numbers();
-#endif
 
 	XSync(dpy, False);
 }

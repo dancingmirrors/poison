@@ -23,7 +23,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 static char *
 get_history_filename(void)
@@ -37,7 +37,7 @@ get_history_filename(void)
 		struct sbuf *buf;
 
 		buf = sbuf_new(0);
-		sbuf_printf(buf, "%s/.config/sdorfehs/%s", homedir,
+		sbuf_printf(buf, "%s/.config/poison/%s", homedir,
 		    HISTORY_FILE);
 		filename = sbuf_free_struct(buf);
 	} else {

@@ -27,7 +27,7 @@
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 /*
  * Convert an X11 modifier mask to the rp modifier mask equivalent, as best it

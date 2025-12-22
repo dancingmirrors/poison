@@ -17,10 +17,10 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_EVENTS_H
-#define _SDORFEHS_EVENTS_H 1
+#ifndef _POISON_EVENTS_H
+#define _POISON_EVENTS_H 1
 
 void listen_for_events(void);
 void show_rudeness_msg(rp_window *win, int raised);
 
-#endif	/* _SDORFEHS_EVENTS_H */
+#endif	/* _POISON_EVENTS_H */

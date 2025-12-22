@@ -17,8 +17,8 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_BAR_H
-#define _SDORFEHS_BAR_H 1
+#ifndef _POISON_BAR_H
+#define _POISON_BAR_H 1
 
 /* Possible values for bar_is_raised status. */
 #define BAR_IS_HIDDEN		0
@@ -56,4 +56,4 @@ void bar_handle_click(rp_screen *s, XButtonEvent *e);
 int bar_open_fifo(void);
 void bar_read_fifo(void);
 
-#endif	/* ! _SDORFEHS_BAR_H */
+#endif	/* ! _POISON_BAR_H */

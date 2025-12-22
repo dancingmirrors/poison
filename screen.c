@@ -21,7 +21,7 @@
 #include <err.h>
 #include <X11/cursorfont.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 static void init_screen(rp_screen *s);
 

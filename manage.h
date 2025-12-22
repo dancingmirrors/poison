@@ -17,8 +17,8 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _SDORFEHS_MANAGE_H
-#define _SDORFEHS_MANAGE_H 1
+#ifndef _POISON_MANAGE_H
+#define _POISON_MANAGE_H 1
 
 #include "data.h"
 
@@ -46,8 +46,6 @@ void update_window_information(rp_window *win);
 void update_window_input_hint(rp_window *win);
 void update_window_protocols(rp_window *win);
 void cleanup_withdrawn_windows(void);
-void cleanup_phantom_windows(void);
-void compact_window_numbers(void);
 void map_window(rp_window *win);
 
 void maximize(rp_window *win);
@@ -66,4 +64,4 @@ void hide_others(rp_window *win);
 void hide_vscreen_windows(rp_vscreen *v);
 void raise_utility_windows(void);
 
-#endif	/* ! _SDORFEHS_MANAGE_H */
+#endif	/* ! _POISON_MANAGE_H */

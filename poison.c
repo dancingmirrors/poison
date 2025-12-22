@@ -36,7 +36,7 @@
 #include <sys/wait.h>
 #include <ctype.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 static void
 sighandler(int signum)
@@ -331,7 +331,7 @@ main(int argc, char *argv[])
 
 	/* For child processes to know */
 	snprintf(pid, sizeof(pid), "%d", getpid());
-	setenv("SDORFEHS_PID", pid, 1);
+	setenv("POISON_PID", pid, 1);
 
 	/* Must be first */
 	register_atom(&_net_supported, "_NET_SUPPORTED");

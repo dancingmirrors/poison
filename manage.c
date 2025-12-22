@@ -31,7 +31,7 @@
 #include <X11/Xatom.h>
 #include <X11/keysymdef.h>
 
-#include "sdorfehs.h"
+#include "poison.h"
 
 static char **unmanaged_window_list = NULL;
 static int num_unmanaged_windows = 0;
@@ -999,9 +999,6 @@ map_window(rp_window *win)
 		win->intended_frame_number = transfor->frame_number;
 	}
 
-#if 0
-	win->number = numset_request(rp_window_numset);
-#else
 	/*
 	 * Use simple static counter for global window number.
 	 * This is used for internal tracking (e.g., frame->win_number).
@@ -1009,7 +1006,6 @@ map_window(rp_window *win)
 	 */
 	static int window_counter = 0;
 	win->number = window_counter++;
-#endif
 	grab_top_level_keys(win->w);
 
 	/* Put win in the mapped window list */
@@ -1104,19 +1100,6 @@ withdraw_window(rp_window *win)
 	if (win->full_screen)
 		window_full_screen(NULL);
 
-#if 0
-	/*
-	 * Give back the window number. the window will get another one, if it is
-	 * remapped.
-	 */
-	if (win->number == -1)
-		warnx("attempting to withdraw '%s' with number -1!",
-		    window_name(win));
-
-	numset_release(rp_window_numset, win->number);
-	win->number = -1;
-#endif
-
 	list_move_tail(&win->node, &rp_unmapped_window);
 
 	/* Update the vscreens. */
@@ -1162,122 +1145,6 @@ cleanup_withdrawn_windows(void)
 		}
 	}
 }
-
-#if 0
-/*
- * DISABLED: Dynamic window numbering and cleanup.
- * These functions implemented the old number reassignment system that caused
- * race conditions. Kept here for potential rollback if issues arise.
- * To re-enable: change `#if 0` to `#if 1`
- */
-
-/*
- * Check all mapped windows and withdraw phantom windows - windows that
- * are in the window list but their X11 window no longer exists or is
- * not viewable.
- */
-void
-cleanup_phantom_windows(void)
-{
-	rp_window *cur, *next;
-	XWindowAttributes attr;
-
-	list_for_each_entry_safe(cur, next, &rp_mapped_window, node) {
-		/*
-		 * Skip windows that are currently displayed to avoid disrupting
-		 * active work. This includes the current focused window and any
-		 * window that is shown in a frame.
-		 */
-		if (cur == current_window() || find_windows_frame(cur))
-			continue;
-
-		/* Check if the window still exists */
-		ignore_badwindow++;
-		int exists = XGetWindowAttributes(dpy, cur->w, &attr);
-		ignore_badwindow--;
-
-		if (!exists) {
-			PRINT_DEBUG(("Phantom window detected: '%s' no longer exists, withdrawing\n",
-			    window_name(cur)));
-			withdraw_window(cur);
-			continue;
-		}
-
-		/*
-		 * Check if window is in an abnormal state. IsViewable means the window
-		 * is mapped and all ancestors are mapped. IsUnmapped is normal for
-		 * windows that are temporarily hidden. IsUnviewable means the window
-		 * is mapped but an ancestor is unmapped - this is abnormal for our
-		 * tracked windows.
-		 */
-		if (attr.map_state == IsUnviewable) {
-			PRINT_DEBUG(("Phantom window detected: '%s' is unviewable (ancestor unmapped), withdrawing\n",
-			    window_name(cur)));
-			withdraw_window(cur);
-			continue;
-		}
-	}
-}
-
-/* Compact window numbers to eliminate gaps left by cleaned up windows */
-void
-compact_window_numbers(void)
-{
-	rp_vscreen *v = rp_current_vscreen;
-	rp_window_elem *cur;
-	int next_num = 0;
-	int needs_compacting = 0;
-
-	/* First pass: check if compacting is needed */
-	list_for_each_entry(cur, &v->mapped_windows, node) {
-		if (cur->number != next_num) {
-			needs_compacting = 1;
-			break;
-		}
-		next_num++;
-	}
-
-	/* Only renumber if gaps exist */
-	if (!needs_compacting)
-		return;
-
-	/* Second pass: renumber windows sequentially, skipping invalid ones */
-	next_num = 0;
-	list_for_each_entry(cur, &v->mapped_windows, node) {
-		/* Validate window exists before renumbering */
-		XWindowAttributes attr;
-		ignore_badwindow++;
-		int exists = XGetWindowAttributes(dpy, cur->win->w, &attr);
-		ignore_badwindow--;
-
-		if (!exists) {
-			PRINT_DEBUG(("Window in mapped_windows no longer exists during compact, skipping\n"));
-			/* Skip this window - it will be cleaned up by cleanup_phantom_windows */
-			continue;
-		}
-
-		if (cur->number != next_num) {
-			/* Release the old number */
-			numset_release(v->numset, cur->number);
-
-			/* Assign the new sequential number */
-			cur->number = next_num;
-			numset_add_num(v->numset, next_num);
-
-			/* Note: We don't call vscreen_resort_window here because
-			 * we're iterating through the mapped_windows list which
-			 * is already sorted. The number change doesn't affect
-			 * the sort order since we're assigning sequential numbers
-			 * in iteration order. */
-		}
-		next_num++;
-	}
-
-	/* Update the window list display */
-	if (v->screen)
-		update_window_names(v->screen, defaults.window_fmt);
-}
-#endif
 
 /* Hide all other mapped windows except for win in win's frame. */
 void
