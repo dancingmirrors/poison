@@ -137,24 +137,6 @@ bool rect_paint_needed(CompRect *ignore_reg, CompRect *reg)
     return true;
 }
 
-static inline int _get_valid_pixmap_depth(Pixmap pxmap)
-{
-    if (!pxmap)
-        return 0;
-
-    Window rroot = None;
-    int rx = 0, ry = 0;
-    unsigned rwid = 0, rhei = 0, rborder = 0, rdepth = 0;
-
-    bool is_valid = XGetGeometry(g_dpy, pxmap, &rroot, &rx, &ry,
-                                 &rwid, &rhei, &rborder, &rdepth) && rwid
-        && rhei;
-    if (is_valid) {
-        return rdepth;
-    }
-    return 0;
-}
-
 static const char *vertex_shader_source =
     "#version 130\n"
     "in vec2 position;\n"

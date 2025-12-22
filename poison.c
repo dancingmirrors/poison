@@ -55,28 +55,11 @@ static void alrm_handler(int signum)
 
 static int handler(Display *d, XErrorEvent *e)
 {
-    char error_msg[100];
-
     if (e->request_code == X_ChangeWindowAttributes &&
         e->error_code == BadAccess)
         errx(1, "another window manager is already running");
 
-#ifdef IGNORE_BADWINDOW
-    return 0;
-#else
-    if (ignore_badwindow && e->error_code == BadWindow)
-        return 0;
-#endif
-
-    XGetErrorText(d, e->error_code, error_msg, sizeof(error_msg));
-    warnx("X error: %s", error_msg);
-
-    /*
-     * If there is already an error to report, replace it with this new one.
-     */
-    free(rp_error_msg);
-    rp_error_msg = xstrdup(error_msg);
-
+    /* IGNORE_BADWINDOW 1 */
     return 0;
 }
 
