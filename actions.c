@@ -2847,6 +2847,8 @@ cmd_quit(int interactive, struct cmdarg **args)
 cmdret *
 cmd_number(int interactive, struct cmdarg **args)
 {
+#if 0
+	/* Window renumbering disabled - numbers are now static */
 	int old_number, new_number;
 	rp_window_elem *other_win, *win;
 
@@ -2884,6 +2886,7 @@ cmd_number(int interactive, struct cmdarg **args)
 		update_window_names(win->win->vscreen->screen,
 		    defaults.window_fmt);
 	}
+#endif
 
 	return cmdret_new(RET_SUCCESS, NULL);
 }

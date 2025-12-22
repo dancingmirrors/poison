@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Antti Nykänen <aon@iki.fi>
+ * Copyright (C) 2006 Antti Nykï¿½nen <aon@iki.fi>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -162,7 +162,12 @@ fmt_name(rp_window_elem *win_elem, struct sbuf *buf)
 static void
 fmt_number(rp_window_elem *win_elem, struct sbuf *buf)
 {
+#if 0
 	sbuf_printf_concat(buf, "%d", win_elem->number);
+#else
+	/* Window numbering disabled - output nothing */
+	sbuf_copy(buf, "");
+#endif
 }
 
 static void

@@ -337,12 +337,13 @@ find_window_other(rp_vscreen *vscreen)
 }
 
 /*
- * Assumes the list is sorted by increasing number. Inserts win into to Right
- * place to keep the list sorted.
+ * Insert window into list.
+ * Use FIFO ordering (add to tail) instead of number-based ordering.
  */
 void
 insert_into_list(rp_window *win, struct list_head *list)
 {
+#if 0
 	rp_window *cur;
 
 	list_for_each_entry(cur, list, node) {
@@ -351,7 +352,9 @@ insert_into_list(rp_window *win, struct list_head *list)
 			return;
 		}
 	}
+#endif
 
+	/* Simply add to tail for FIFO ordering */
 	list_add_tail(&win->node, list);
 }
 
@@ -443,11 +446,13 @@ give_window_focus(rp_window *win, rp_window *last_win)
 	/* Clean up any stale withdrawn windows on focus change */
 	cleanup_withdrawn_windows();
 
+#if 0
 	/* Clean up phantom mapped windows that no longer exist */
 	cleanup_phantom_windows();
 
 	/* Compact window numbers to eliminate gaps */
 	compact_window_numbers();
+#endif
 
 	XSync(dpy, False);
 }

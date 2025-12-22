@@ -999,7 +999,17 @@ map_window(rp_window *win)
 		win->intended_frame_number = transfor->frame_number;
 	}
 
+#if 0
 	win->number = numset_request(rp_window_numset);
+#else
+	/*
+	 * Use simple static counter for global window number.
+	 * This is used for internal tracking (e.g., frame->win_number).
+	 * X11 window managers are single-threaded, so no locking needed.
+	 */
+	static int window_counter = 0;
+	win->number = window_counter++;
+#endif
 	grab_top_level_keys(win->w);
 
 	/* Put win in the mapped window list */
@@ -1094,6 +1104,7 @@ withdraw_window(rp_window *win)
 	if (win->full_screen)
 		window_full_screen(NULL);
 
+#if 0
 	/*
 	 * Give back the window number. the window will get another one, if it is
 	 * remapped.
@@ -1104,6 +1115,7 @@ withdraw_window(rp_window *win)
 
 	numset_release(rp_window_numset, win->number);
 	win->number = -1;
+#endif
 
 	list_move_tail(&win->node, &rp_unmapped_window);
 
@@ -1150,6 +1162,14 @@ cleanup_withdrawn_windows(void)
 		}
 	}
 }
+
+#if 0
+/*
+ * DISABLED: Dynamic window numbering and cleanup.
+ * These functions implemented the old number reassignment system that caused
+ * race conditions. Kept here for potential rollback if issues arise.
+ * To re-enable: change `#if 0` to `#if 1`
+ */
 
 /*
  * Check all mapped windows and withdraw phantom windows - windows that
@@ -1257,6 +1277,7 @@ compact_window_numbers(void)
 	if (v->screen)
 		update_window_names(v->screen, defaults.window_fmt);
 }
+#endif
 
 /* Hide all other mapped windows except for win in win's frame. */
 void
