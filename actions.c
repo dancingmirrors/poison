@@ -198,6 +198,7 @@ static cmdret *cmd_execa(int interactive, struct cmdarg **args);
 static cmdret *cmd_execf(int interactive, struct cmdarg **args);
 static cmdret *cmd_execv(int interactive, struct cmdarg **args);
 static cmdret *cmd_execw(int interactive, struct cmdarg **args);
+static cmdret *cmd_term(int interactive, struct cmdarg **args);
 static cmdret *cmd_fdump(int interactive, struct cmdarg **args);
 static cmdret *cmd_float(int interactive, struct cmdarg **args);
 static cmdret *cmd_focusdown(int interactive, struct cmdarg **args);
@@ -449,6 +450,7 @@ init_user_commands(void)
 	            "/bin/sh -c ", arg_SHELLCMD);
 	add_command("execw",		cmd_execw,	1, 1, 1,
 	            "/bin/sh -c ", arg_SHELLCMD);
+	add_command("term",		cmd_term,	0, 0, 0);
 	add_command("fdump",		cmd_fdump,	1, 0, 0,
 	            "", arg_NUMBER);
 	add_command("float",		cmd_float,	1, 1, 0,
@@ -888,6 +890,7 @@ initialize_default_keybindings(void)
 	add_keybinding(XK_question, RP_SUPER_MASK, "help " ROOT_KEYMAP, map);
 	add_keybinding(XK_v, RP_SUPER_MASK, "vsplit", map);
 	add_keybinding(XK_w, RP_SUPER_MASK, "windows", map);
+	add_keybinding(XK_Return, RP_SUPER_MASK | RP_SHIFT_MASK, "term", map);
 
 	add_alias("unbind", "undefinekey " ROOT_KEYMAP);
 	add_alias("bind", "definekey " ROOT_KEYMAP);
@@ -2671,6 +2674,35 @@ cmd_execv(int interactive, struct cmdarg **args)
 	if (!(vscreen = find_vscreen(ARG_STRING(0))))
 		return cmdret_new(RET_FAILURE, NULL);
 	vspawn(ARG_STRING(1), current_frame(vscreen), vscreen);
+	return cmdret_new(RET_SUCCESS, NULL);
+}
+
+cmdret *
+cmd_term(int interactive, struct cmdarg **args)
+{
+	const char *terminals[] = {
+		"x-terminal-emulator",
+		"cool-retro-term",
+		"sakura",
+		"gnome-terminal",
+		"urxvt",
+		"xterm",
+		NULL
+	};
+	struct sbuf *cmd;
+	int i;
+
+	/* Build a shell command that tries each terminal in order */
+	cmd = sbuf_new(0);
+	for (i = 0; terminals[i] != NULL; i++) {
+		if (i > 0)
+			sbuf_concat(cmd, " || ");
+		sbuf_printf_concat(cmd, "command -v %s >/dev/null 2>&1 && exec %s",
+		    terminals[i], terminals[i]);
+	}
+
+	spawn(sbuf_get(cmd), current_frame(rp_current_vscreen));
+	sbuf_free(cmd);
 	return cmdret_new(RET_SUCCESS, NULL);
 }
 
