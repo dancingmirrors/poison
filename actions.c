@@ -2843,8 +2843,8 @@ cmdret *cmd_windowselector(int interactive, struct cmdarg **args)
             if (selected_win) {
                 /* Verify the window still exists before switching */
                 rp_window_elem *elem =
-                    vscreen_find_window(&rp_current_vscreen->
-                                        mapped_windows, selected_win);
+                    vscreen_find_window
+                    (&rp_current_vscreen->mapped_windows, selected_win);
                 if (elem) {
                     set_active_window(selected_win);
                     done = 1;
@@ -4827,8 +4827,8 @@ cmdret *cmd_nextscreen(int interactive, struct cmdarg **args)
         return cmdret_new(RET_FAILURE, "nextscreen: no other screen");
 
     new_frame = vscreen_get_frame(new_screen->current_vscreen,
-                                  new_screen->current_vscreen->
-                                  current_frame);
+                                  new_screen->
+                                  current_vscreen->current_frame);
 
     set_active_frame(new_frame, 1);
 
@@ -4847,8 +4847,8 @@ cmdret *cmd_prevscreen(int interactive, struct cmdarg **args)
         return cmdret_new(RET_SUCCESS, "prevscreen: no other screen");
 
     new_frame = vscreen_get_frame(new_screen->current_vscreen,
-                                  new_screen->current_vscreen->
-                                  current_frame);
+                                  new_screen->
+                                  current_vscreen->current_frame);
 
     set_active_frame(new_frame, 1);
 

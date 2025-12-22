@@ -891,8 +891,7 @@ void maximize(rp_window *win)
     move_window(win);
 
     PRINT_DEBUG(("Resizing %s window '%s' to x:%d y:%d w:%d h:%d\n",
-                 win->transient ? "transient" : (win->
-                                                 floated ? "floated" :
+                 win->transient ? "transient" : (win->floated ? "floated" :
                                                  "normal"),
                  window_name(win), win->x, win->y, win->width,
                  win->height));

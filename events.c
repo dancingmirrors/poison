@@ -385,14 +385,13 @@ static void configure_request(XConfigureRequestEvent *e)
             win->y = e->y;
             PRINT_DEBUG(("request CWY %d\n", e->y));
         }
-        if (e->
-            value_mask & (CWX | CWY | CWBorderWidth | CWWidth | CWHeight))
-        {
+        if (e->value_mask &
+            (CWX | CWY | CWBorderWidth | CWWidth | CWHeight)) {
             /* Grant the request, then immediately maximize it. */
             XConfigureWindow(dpy, win->w,
-                             e->
-                             value_mask & (CWX | CWY | CWBorderWidth |
-                                           CWWidth | CWHeight), &changes);
+                             e->value_mask & (CWX | CWY | CWBorderWidth |
+                                              CWWidth | CWHeight),
+                             &changes);
             XSync(dpy, False);
             if (win->state == NormalState)
                 maximize(win);
@@ -413,9 +412,8 @@ static void configure_request(XConfigureRequestEvent *e)
         if (e->value_mask & CWBorderWidth)
             changes.x = e->x;
         XConfigureWindow(dpy, e->window,
-                         e->
-                         value_mask & (CWX | CWY | CWBorderWidth | CWWidth
-                                       | CWHeight), &changes);
+                         e->value_mask & (CWX | CWY | CWBorderWidth |
+                                          CWWidth | CWHeight), &changes);
     }
 }
 
@@ -482,8 +480,8 @@ static void client_msg(XClientMessageEvent *ev)
                     set_active_window(w);
                 else
                     blank_frame(vscreen_get_frame(win->vscreen,
-                                                  win->vscreen->
-                                                  current_frame));
+                                                  win->
+                                                  vscreen->current_frame));
             }
         } else {
             warnx("non-standard WM_CHANGE_STATE format");
