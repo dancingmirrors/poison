@@ -1455,6 +1455,16 @@ static void check_unredirect(Display *dpy)
     for (w = list; w; w = w->next) {
         if (w->a.map_state == IsViewable && !w->destroyed &&
             w->opacity == OPAQUE && is_fullscreen(w)) {
+            if (w->window_type == WINTYPE_SPLASH ||
+                w->window_type == WINTYPE_TOOLTIP ||
+                w->window_type == WINTYPE_NOTIFY ||
+                w->window_type == WINTYPE_MENU ||
+                w->window_type == WINTYPE_DROPDOWN_MENU ||
+                w->window_type == WINTYPE_POPUP_MENU ||
+                w->window_type == WINTYPE_COMBO ||
+                w->window_type == WINTYPE_DND) {
+                continue;
+            }
             unredir_possible = True;
             break;
         }
