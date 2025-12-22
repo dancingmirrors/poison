@@ -480,8 +480,8 @@ static void client_msg(XClientMessageEvent *ev)
                     set_active_window(w);
                 else
                     blank_frame(vscreen_get_frame(win->vscreen,
-                                                  win->
-                                                  vscreen->current_frame));
+                                                  win->vscreen->
+                                                  current_frame));
             }
         } else {
             warnx("non-standard WM_CHANGE_STATE format");
