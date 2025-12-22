@@ -138,10 +138,7 @@ format_string(char *fmt, rp_window_elem *win_elem, struct sbuf *buffer)
 
 static void fmt_framenum(rp_window_elem *win_elem, struct sbuf *buf)
 {
-    if (win_elem->win->frame_number != EMPTY) {
-        sbuf_printf_concat(buf, "%d", win_elem->win->frame_number);
-    } else
-        sbuf_copy(buf, " ");
+    sbuf_copy(buf, "");
 }
 
 static void fmt_lastaccess(rp_window_elem *win_elem, struct sbuf *buf)
