@@ -201,8 +201,6 @@ void xrandr_output_change(XRROutputChangeNotifyEvent *ev)
         screen_update_workarea(cur);
         screen_update_frames(cur);
     }
-
-    redraw_sticky_bar_text(1);
 }
 
 #ifdef DEBUG

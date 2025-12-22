@@ -142,7 +142,6 @@ static void init_defaults(void)
     defaults.window_fmt = xstrdup("%n%s%t");
     defaults.info_fmt = xstrdup("(%H, %W) %n(%t)");
     defaults.frame_fmt = xstrdup("Frame %f (%Wx%H)");
-    defaults.sticky_fmt = xstrdup("%t");
     defaults.resize_fmt = xstrdup("Resize frame (%Wx%H)");
 
     defaults.win_name = WIN_NAME_RES_NAME;

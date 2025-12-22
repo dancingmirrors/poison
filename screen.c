@@ -598,8 +598,6 @@ void screen_update_frames(rp_screen *s)
             maximize_all_windows_in_frame(f);
         }
     }
-
-    redraw_sticky_bar_text(1);
 }
 
 void screen_update_workarea(rp_screen *s)

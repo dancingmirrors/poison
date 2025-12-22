@@ -575,14 +575,10 @@ static void key_press(XEvent *ev)
 static void button_press(XEvent *ev)
 {
     rp_screen *s;
-    XButtonEvent *xbe = (XButtonEvent *) ev;
 
     s = rp_current_screen;
     if (!s)
         return;
-
-    if (xbe->window == s->bar_window)
-        bar_handle_click(s, xbe);
 }
 
 static void property_notify(XEvent *ev)

@@ -156,7 +156,6 @@ static cmdret *set_resizefmt(struct cmdarg **args);
 static cmdret *set_resizeunit(struct cmdarg **args);
 static cmdret *set_rudeness(struct cmdarg **args);
 
-static cmdret *set_stickyfmt(struct cmdarg **args);
 static cmdret *set_topkmap(struct cmdarg **args);
 static cmdret *set_transgravity(struct cmdarg **args);
 static cmdret *set_vscreens(struct cmdarg **args);
@@ -342,7 +341,6 @@ static void init_set_vars(void)
     add_set_var("resizeunit", set_resizeunit, 1, "", arg_NUMBER);
     add_set_var("rudeness", set_rudeness, 1, "", arg_NUMBER);
 
-    add_set_var("stickyfmt", set_stickyfmt, 1, "", arg_REST);
     add_set_var("topkmap", set_topkmap, 1, "", arg_STRING);
     add_set_var("transgravity", set_transgravity, 1, "", arg_GRAVITY);
     add_set_var("vscreens", set_vscreens, 1, "", arg_NUMBER);
@@ -4289,8 +4287,6 @@ static cmdret *set_fgcolor(struct cmdarg **args)
         defaults.fgcolor_string = xstrdup(ARG_STRING(0));
     }
 
-    redraw_sticky_bar_text(1);
-
     return cmdret_new(RET_SUCCESS, NULL);
 }
 
@@ -4323,8 +4319,6 @@ static cmdret *set_bgcolor(struct cmdarg **args)
         free(defaults.bgcolor_string);
         defaults.bgcolor_string = xstrdup(ARG_STRING(0));
     }
-
-    redraw_sticky_bar_text(1);
 
     return cmdret_new(RET_SUCCESS, NULL);
 }
@@ -4413,8 +4407,6 @@ static cmdret *set_barbordercolor(struct cmdarg **args)
         free(defaults.barbordercolor_string);
         defaults.barbordercolor_string = xstrdup(ARG_STRING(0));
     }
-
-    redraw_sticky_bar_text(1);
 
     return cmdret_new(RET_SUCCESS, NULL);
 }
@@ -4779,23 +4771,6 @@ static cmdret *set_barpadding(struct cmdarg **args)
     list_for_each_entry(s, &rp_screens, node) {
         screen_update_workarea(s);
         screen_update_frames(s);
-    }
-
-    return cmdret_new(RET_SUCCESS, NULL);
-}
-
-static cmdret *set_stickyfmt(struct cmdarg **args)
-{
-    rp_screen *s;
-
-    if (args[0] == NULL)
-        return cmdret_new(RET_SUCCESS, "%s", defaults.sticky_fmt);
-
-    free(defaults.sticky_fmt);
-    defaults.sticky_fmt = xstrdup(ARG_STRING(0));
-
-    list_for_each_entry(s, &rp_screens, node) {
-        hide_bar(s, 0);
     }
 
     return cmdret_new(RET_SUCCESS, NULL);

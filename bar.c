@@ -37,26 +37,6 @@ static char *last_msg = NULL;
 static int last_mark_start = 0;
 static int last_mark_end = 0;
 
-/* Buffers for sticky bar */
-static struct sbuf *bar_buf = NULL;
-static struct sbuf *bar_line = NULL;
-struct list_head bar_chunks;
-static char *last_bar_line;
-static char *last_bar_window_fmt;
-static char bar_tmp_line[256];
-static Pixmap bar_pm;
-
-struct bar_chunk {
-    char *text;
-    int length;
-    char *color;
-    char *font;
-    char *clickcmd;
-    int text_x;
-    int text_width;
-    struct list_head node;
-};
-
 static void draw_partial_string(rp_screen * s, char *msg, int len,
                                 int x_offset, int y_offset, int style,
                                 char *color);
@@ -108,15 +88,6 @@ int bar_mkfifo(void)
 
 void init_bar(void)
 {
-    rp_screen *primary = screen_primary();
-
-    bar_buf = sbuf_new(sizeof(bar_tmp_line));
-    bar_line = sbuf_new(sizeof(bar_tmp_line));
-    bar_pm = XCreatePixmap(dpy, primary->bar_window, primary->width,
-                           FONT_HEIGHT(rp_current_screen) * 2,
-                           DefaultDepth(dpy, DefaultScreen(dpy)));
-
-    INIT_LIST_HEAD(&bar_chunks);
 }
 
 /* Hide the bar from sight. */
@@ -225,11 +196,6 @@ int bar_y(rp_screen *s, int height)
     return y;
 }
 
-int sticky_bar_height(rp_screen *s)
-{
-    return 0;
-}
-
 void update_bar(rp_screen *s)
 {
     switch (s->bar_is_raised) {
@@ -239,275 +205,6 @@ void update_bar(rp_screen *s)
     case BAR_IS_VSCREEN_LIST:
         update_vscreen_names(s);
         break;
-    case BAR_IS_STICKY:
-        hide_bar(s, 0);
-        break;
-    }
-}
-
-/*
- * To avoid having to parse the bar line text and redraw text over and over
- * again, text is drawn on a pixmap in two lines.  When the window format text
- * changes (such as when the current window changes) or the bar line text
- * changes, each line that is different is redrawn.  Then the two lines are
- * copied into the actual bar window side by side.
- */
-void redraw_sticky_bar_text(int force)
-{
-    rp_screen *s = screen_primary();
-    struct list_head *iter, *tmp;
-    struct bar_chunk *chunk;
-    struct sbuf *tbuf, *curcmd, *curtxt;
-    char *tline, *font, *color, *clickcmd;
-    int diff = 0, len, cmd = 0, skip = 0, xftx = 0, x;
-    int width, height;
-
-    return;
-
-    /*
-     * If we were showing a message or window list before, make sure we
-     * clear it all.
-     */
-    if (s->bar_is_raised != BAR_IS_STICKY)
-        force = 1;
-
-    width = s->width - (defaults.bar_border_width * 2);
-    if (!defaults.bar_in_padding)
-        width -= defaults.padding_right + defaults.padding_left;
-    height = FONT_HEIGHT(s) + (defaults.bar_y_padding * 2);
-    XMoveResizeWindow(dpy, s->bar_window, bar_x(s, width),
-                      bar_y(s, height), width, height);
-
-    if (force) {
-        XFreePixmap(dpy, bar_pm);
-        XClearWindow(dpy, s->bar_window);
-        bar_pm = XCreatePixmap(dpy, s->bar_window, width,
-                               FONT_HEIGHT(s) * 2, DefaultDepth(dpy,
-                                                                DefaultScreen
-                                                                (dpy)));
-    }
-
-    s->bar_is_raised = BAR_IS_STICKY;
-    XMapRaised(dpy, s->bar_window);
-
-    /* check window title for changes */
-    tbuf = sbuf_new(0);
-    get_current_window_in_fmt(defaults.sticky_fmt, tbuf);
-    diff = (last_bar_window_fmt == NULL ||
-            strcmp(last_bar_window_fmt, sbuf_get(tbuf)) != 0);
-
-    if (diff || force) {
-        PRINT_DEBUG(("redrawing window format in bar\n"));
-
-        if (last_bar_window_fmt != NULL)
-            free(last_bar_window_fmt);
-        last_bar_window_fmt = xstrdup(sbuf_get(tbuf));
-
-        XFillRectangle(dpy, bar_pm, s->inverse_gc, 0, 0, s->width,
-                       FONT_HEIGHT(s));
-
-        rp_draw_string(s, bar_pm, STYLE_NORMAL, 0, FONT_ASCENT(s),
-                       last_bar_window_fmt, strlen(last_bar_window_fmt),
-                       NULL, NULL);
-    }
-    sbuf_free(tbuf);
-
-    XCopyArea(dpy, bar_pm, s->bar_window, s->inverse_gc,
-              0, 0, (s->width / 2) - (defaults.bar_x_padding * 2),
-              FONT_HEIGHT(s), defaults.bar_x_padding,
-              defaults.bar_y_padding);
-
-    /* Repeat for bar text line */
-
-    diff = (last_bar_line == NULL ||
-            strcmp(last_bar_line, sbuf_get(bar_line)) != 0);
-    if (!diff && !force)
-        goto redraw_bar_text;
-
-    PRINT_DEBUG(("recalculating bar chunks\n"));
-
-    if (last_bar_line)
-        free(last_bar_line);
-    last_bar_line = xstrdup(sbuf_get(bar_line));
-    len = strlen(last_bar_line);
-
-    curcmd = sbuf_new(0);
-    curtxt = sbuf_new(0);
-
-    list_for_each_safe_entry(chunk, iter, tmp, &bar_chunks, node) {
-        free(chunk->text);
-        if (chunk->color)
-            free(chunk->color);
-        if (chunk->font)
-            free(chunk->font);
-        if (chunk->clickcmd)
-            free(chunk->clickcmd);
-        list_del(&chunk->node);
-        free(chunk);
-    }
-
-    color = font = clickcmd = NULL;
-    for (x = 0; x < len; x++) {
-        if (last_bar_line[x] == '\\' && !skip) {
-            skip = 1;
-            continue;
-        }
-
-        if (cmd) {
-            if (last_bar_line[x] == ')' && !skip) {
-                tline = sbuf_get(curcmd);
-                if (strncmp(tline, "fg(", 3) == 0) {
-                    /* ^fg(green)text^fg() */
-                    if (color)
-                        free(color);
-                    color = NULL;
-                    if (strlen(tline) > 3)
-                        color = xstrdup(tline + 3);
-                } else if (strncmp(tline, "fn(", 3) == 0) {
-                    /* ^fn(courier)text^fn() */
-                    if (font)
-                        free(font);
-                    font = NULL;
-                    if (strlen(tline) > 3)
-                        font = xstrdup(tline + 3);
-                } else if (strncmp(tline, "ca(", 3) == 0) {
-                    /* ^ca(1,some command)*^ca() */
-                    if (clickcmd)
-                        free(clickcmd);
-                    clickcmd = NULL;
-                    if (strlen(tline) > 4)
-                        clickcmd = xstrdup(tline + 3);
-                } else {
-                    PRINT_DEBUG(("unsupported bar command "
-                                 "\"%s\", ignoring\n", tline));
-                }
-                sbuf_clear(curcmd);
-                cmd = 0;
-            } else
-                sbuf_nconcat(curcmd, last_bar_line + x, 1);
-        } else if (last_bar_line[x] == '^' && !skip) {
-            cmd = 1;
-            chunk = xmalloc(sizeof(struct bar_chunk));
-            memset(chunk, 0, sizeof(struct bar_chunk));
-            chunk->text = xstrdup(sbuf_get(curtxt));
-            chunk->length = strlen(chunk->text);
-            chunk->color = color ? xstrdup(color) : NULL;
-            chunk->font = font ? xstrdup(font) : NULL;
-            chunk->clickcmd = clickcmd ? xstrdup(clickcmd) : NULL;
-            list_add_tail(&chunk->node, &bar_chunks);
-            sbuf_clear(curtxt);
-        } else {
-            sbuf_nconcat(curtxt, last_bar_line + x, 1);
-        }
-
-        skip = 0;
-    }
-    tline = sbuf_get(curtxt);
-    if (strlen(tline)) {
-        chunk = xmalloc(sizeof(struct bar_chunk));
-        memset(chunk, 0, sizeof(struct bar_chunk));
-        chunk->text = xstrdup(sbuf_get(curtxt));
-        chunk->length = strlen(chunk->text);
-        chunk->color = color ? xstrdup(color) : NULL;
-        chunk->font = font ? xstrdup(font) : NULL;
-        chunk->clickcmd = clickcmd ? xstrdup(clickcmd) : NULL;
-        list_add_tail(&chunk->node, &bar_chunks);
-    }
-    sbuf_free(curcmd);
-    sbuf_free(curtxt);
-    if (color)
-        free(color);
-    if (font)
-        free(font);
-    if (clickcmd)
-        free(clickcmd);
-
-  redraw_bar_text:
-    XFillRectangle(dpy, bar_pm, s->inverse_gc, 0, FONT_HEIGHT(s), s->width,
-                   FONT_HEIGHT(s));
-    xftx = 0;
-    list_for_each_entry(chunk, &bar_chunks, node) {
-        rp_draw_string(s, bar_pm, STYLE_NORMAL,
-                       (width / 2) + xftx,
-                       FONT_HEIGHT(s) + FONT_ASCENT(s),
-                       chunk->text, chunk->length,
-                       chunk->font ? chunk->font : NULL,
-                       chunk->color ? chunk->color : NULL);
-
-        xftx += (chunk->text_width = rp_text_width(s, chunk->text,
-                                                   chunk->length,
-                                                   chunk->font));
-    }
-
-    /* update each chunk's text_x relative to its final location */
-    x = 0;
-    list_for_each_entry(chunk, &bar_chunks, node) {
-        chunk->text_x = width - xftx - defaults.bar_x_padding + x;
-        x += chunk->text_width;
-    }
-
-    /* we can only copy up to half of the bar width */
-    if (xftx > (width / 2) - (defaults.bar_x_padding * 2))
-        xftx = (width / 2) - (defaults.bar_x_padding * 2);
-
-    XCopyArea(dpy, bar_pm, s->bar_window, s->inverse_gc,
-              xftx + (defaults.bar_x_padding * 2), FONT_HEIGHT(s),
-              (width / 2) - (defaults.bar_x_padding * 2), FONT_HEIGHT(s),
-              (width / 2) + defaults.bar_x_padding,
-              defaults.bar_y_padding);
-
-    /* Our XMapRaise may have covered one */
-    raise_utility_windows();
-}
-
-void bar_handle_click(rp_screen *s, XButtonEvent *e)
-{
-    struct bar_chunk *chunk;
-    char *cmd, *actcmd;
-    int btn, len;
-
-    PRINT_DEBUG(("bar click at %d,%d button %d\n", e->x, e->y, e->button));
-
-    list_for_each_entry(chunk, &bar_chunks, node) {
-        PRINT_DEBUG(("chunk: text_x:%d text_width:%d text:%s\n",
-                     chunk->text_x, chunk->text_width, chunk->text));
-
-        if (!chunk->clickcmd)
-            continue;
-
-        if (e->x < chunk->text_x ||
-            e->x > (chunk->text_x + chunk->text_width))
-            continue;
-
-        /* 1,somecmd,2,someothercmd */
-        cmd = chunk->clickcmd;
-        PRINT_DEBUG(("chunk: parsing btns/cmds:%s\n", cmd));
-
-        while (cmd != NULL && cmd[0] != '\0') {
-            len = strlen(cmd);
-            actcmd = xmalloc(len);
-            memset(actcmd, 0, len);
-            if (sscanf(cmd, "%d,%[^,]%n", &btn, actcmd, &len) != 2) {
-                PRINT_DEBUG(("chunk: invalid format\n"));
-                free(actcmd);
-                break;
-            }
-
-            PRINT_DEBUG(("chunk: btn:%d cmd:%s\n", btn, actcmd));
-
-            if (e->button == (unsigned int) btn) {
-                PRINT_DEBUG(("executing bar click action %s\n", actcmd));
-                spawn(actcmd, current_frame(rp_current_vscreen));
-                free(actcmd);
-                break;
-            }
-
-            cmd += len;
-            free(actcmd);
-            if (cmd[0] != ',')
-                break;
-            cmd++;
-        }
     }
 }
 
@@ -523,9 +220,7 @@ void update_window_names(rp_screen *s, char *fmt)
 
     bar_buffer = sbuf_new(0);
 
-    if (s->bar_is_raised == BAR_IS_STICKY) {
-        redraw_sticky_bar_text(0);
-    } else if (s->bar_is_raised == BAR_IS_WINDOW_LIST) {
+    if (s->bar_is_raised == BAR_IS_WINDOW_LIST) {
         delimiter = (defaults.window_list_style == STYLE_ROW) ? " " : "\n";
 
         get_window_list(fmt, delimiter, bar_buffer, &mark_start,
@@ -908,10 +603,7 @@ marked_message_internal(char *msg, int mark_start, int mark_end,
     int width;
     int height;
 
-    if (bar_type == BAR_IS_STICKY)
-        s = screen_primary();
-    else
-        s = rp_current_screen;
+    s = rp_current_screen;
 
     PRINT_DEBUG(("msg = %s\n", msg ? msg : "NULL"));
     PRINT_DEBUG(("mark_start = %d, mark_end = %d\n", mark_start,
@@ -935,7 +627,7 @@ marked_message_internal(char *msg, int mark_start, int mark_end,
     /* Keep a record of the message. */
     update_last_message(msg, mark_start, mark_end);
 
-    if (bar_type != BAR_IS_STICKY && bar_time_left())
+    if (bar_time_left())
         bar_reset_alarm();
 }
 
@@ -991,14 +683,13 @@ int bar_open_fifo(void)
 void bar_read_fifo(void)
 {
     ssize_t ret;
-    int x, start;
 
     PRINT_DEBUG(("bar FIFO data to read\n"));
 
     for (;;) {
-        memset(bar_tmp_line, 0, sizeof(bar_tmp_line));
-        ret = read(rp_glob_screen.bar_fifo_fd, &bar_tmp_line,
-                   sizeof(bar_tmp_line));
+        char buf[256];
+        memset(buf, 0, sizeof(buf));
+        ret = read(rp_glob_screen.bar_fifo_fd, buf, sizeof(buf));
         if (ret < 1) {
             if (ret == 0)
                 PRINT_DEBUG(("FIFO %d closed, re-opening\n",
@@ -1012,21 +703,6 @@ void bar_read_fifo(void)
             break;
         }
 
-        for (x = 0, start = 0; x < ret; x++) {
-            if (bar_tmp_line[x] == '\0') {
-                sbuf_nconcat(bar_buf, bar_tmp_line + start, x - start);
-                start = x + 1;
-                break;
-            } else if (bar_tmp_line[x] == '\n') {
-                sbuf_nconcat(bar_buf, bar_tmp_line + start, x - start);
-                sbuf_copy(bar_line, sbuf_get(bar_buf));
-                redraw_sticky_bar_text(0);
-                sbuf_clear(bar_buf);
-                start = x + 1;
-            }
-        }
-
-        if (x == ret)
-            sbuf_nconcat(bar_buf, bar_tmp_line + start, x - start);
+        /* Bar FIFO data is currently not used */
     }
 }

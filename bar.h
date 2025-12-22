@@ -25,15 +25,12 @@
 #define BAR_IS_WINDOW_LIST	1
 #define BAR_IS_VSCREEN_LIST	2
 #define BAR_IS_MESSAGE		3
-#define BAR_IS_STICKY		4
 
-#define BAR_IS_RAISED(s)	(s->bar_is_raised != BAR_IS_HIDDEN && \
-				s->bar_is_raised != BAR_IS_STICKY)
+#define BAR_IS_RAISED(s)	(s->bar_is_raised != BAR_IS_HIDDEN)
 
 int bar_mkfifo(void);
 void init_bar(void);
 void bar_reset_alarm(void);
-void redraw_sticky_bar_text(int force);
 void update_window_names(rp_screen * s, char *fmt);
 void update_vscreen_names(rp_screen * s);
 void update_bar(rp_screen * s);
@@ -42,7 +39,6 @@ void show_vscreen_bar(rp_screen * s);
 void hide_bar(rp_screen * s, int force);
 int bar_y(rp_screen * s, int height);
 int bar_x(rp_screen * s, int width);
-int sticky_bar_height(rp_screen * s);
 
 void message(char *s);
 void marked_message(char *s, int mark_start, int mark_end, int bar_type);
@@ -50,8 +46,6 @@ void marked_message_printf(int mark_start, int mark_end, char *fmt, ...);
 void redraw_last_message(void);
 void show_last_message(void);
 void free_bar(void);
-
-void bar_handle_click(rp_screen * s, XButtonEvent * e);
 
 int bar_open_fifo(void);
 void bar_read_fifo(void);
