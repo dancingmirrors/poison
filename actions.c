@@ -29,6 +29,7 @@
 #include <X11/Xproto.h>
 #include <X11/extensions/XTest.h>
 #include <sys/ioctl.h>
+#include <dirent.h>
 
 #include "poison.h"
 
@@ -268,6 +269,7 @@ static cmdret *cmd_verbexec(int interactive, struct cmdarg **args);
 static cmdret *cmd_version(int interactive, struct cmdarg **args);
 static cmdret *cmd_windows(int interactive, struct cmdarg **args);
 static cmdret *cmd_windowselector(int interactive, struct cmdarg **args);
+static cmdret *cmd_applauncher(int interactive, struct cmdarg **args);
 
 static void
 add_set_var(char *name, cmdret *(*fn)(struct cmdarg **), int nargs, ...)
@@ -566,6 +568,7 @@ init_user_commands(void)
 	add_command("windows",		cmd_windows,	1, 0, 0,
                     "", arg_REST);
 	add_command("windowselector",	cmd_windowselector, 0, 0, 0);
+	add_command("applauncher",	cmd_applauncher, 0, 0, 0);
 	/* @end (tag required for genrpbindings) */
 
 	init_set_vars();
@@ -881,6 +884,7 @@ initialize_default_keybindings(void)
 	add_keybinding(XK_colon, RP_SUPER_MASK, "colon", map);
 	add_keybinding(XK_h, RP_SUPER_MASK, "hsplit", map);
 	add_keybinding(XK_o, RP_SUPER_MASK, "only", map);
+	add_keybinding(XK_p, RP_SUPER_MASK, "applauncher", map);
 	add_keybinding(XK_question, RP_SUPER_MASK, "help " ROOT_KEYMAP, map);
 	add_keybinding(XK_v, RP_SUPER_MASK, "vsplit", map);
 	add_keybinding(XK_w, RP_SUPER_MASK, "windows", map);
@@ -2954,6 +2958,284 @@ cmd_windowselector(int interactive, struct cmdarg **args)
 
 	/* Hide the bar after selection */
 	hide_bar(s, 0);
+
+	return cmdret_new(RET_SUCCESS, NULL);
+}
+
+/* Structure to hold desktop application information */
+struct desktop_app {
+	char *name;
+	char *exec;
+	struct list_head node;
+};
+
+/* Parse a .desktop file and extract Name and Exec fields */
+static struct desktop_app *
+parse_desktop_file(const char *filepath)
+{
+	FILE *fp;
+	char line[1024];
+	struct desktop_app *app = NULL;
+	char *name = NULL;
+	char *exec = NULL;
+	int in_desktop_entry = 0;
+	int nodisplay = 0;
+	int hidden = 0;
+
+	fp = fopen(filepath, "r");
+	if (!fp)
+		return NULL;
+
+	while (fgets(line, sizeof(line), fp)) {
+		/* Remove newline */
+		line[strcspn(line, "\n")] = 0;
+
+		/* Check if we're in [Desktop Entry] section */
+		if (strcmp(line, "[Desktop Entry]") == 0) {
+			in_desktop_entry = 1;
+			continue;
+		} else if (line[0] == '[') {
+			/* Entering a different section */
+			in_desktop_entry = 0;
+			continue;
+		}
+
+		if (!in_desktop_entry)
+			continue;
+
+		/* Parse Name field */
+		if (strncmp(line, "Name=", 5) == 0 && !name) {
+			name = xstrdup(line + 5);
+		}
+		/* Parse Exec field */
+		else if (strncmp(line, "Exec=", 5) == 0 && !exec) {
+			exec = xstrdup(line + 5);
+		}
+		/* Check NoDisplay */
+		else if (strncmp(line, "NoDisplay=", 10) == 0) {
+			if (strcmp(line + 10, "true") == 0)
+				nodisplay = 1;
+		}
+		/* Check Hidden */
+		else if (strncmp(line, "Hidden=", 7) == 0) {
+			if (strcmp(line + 7, "true") == 0)
+				hidden = 1;
+		}
+	}
+
+	fclose(fp);
+
+	/* Create app entry if we have both name and exec, and it's not hidden */
+	if (name && exec && !nodisplay && !hidden) {
+		app = xmalloc(sizeof(struct desktop_app));
+		app->name = name;
+		app->exec = exec;
+	} else {
+		free(name);
+		free(exec);
+	}
+
+	return app;
+}
+
+/* Read all .desktop files from a directory */
+static void
+read_desktop_dir(const char *dir, struct list_head *apps)
+{
+	DIR *dp;
+	struct dirent *entry;
+	char filepath[PATH_MAX];
+	struct desktop_app *app;
+
+	dp = opendir(dir);
+	if (!dp)
+		return;
+
+	while ((entry = readdir(dp))) {
+		/* Only process .desktop files */
+		if (strlen(entry->d_name) < 9 ||
+		    strcmp(entry->d_name + strlen(entry->d_name) - 8, ".desktop") != 0)
+			continue;
+
+		snprintf(filepath, sizeof(filepath), "%s/%s", dir, entry->d_name);
+		app = parse_desktop_file(filepath);
+		if (app)
+			list_add_tail(&app->node, apps);
+	}
+
+	closedir(dp);
+}
+
+/* Clean up Exec field by removing %u, %U, %f, %F, etc. */
+static char *
+clean_exec_field(const char *exec)
+{
+	struct sbuf *cleaned = sbuf_new(0);
+	const char *p = exec;
+	int in_space = 0;
+
+	while (*p) {
+		if (*p == '%' && *(p + 1)) {
+			/* Skip field codes like %u, %U, %f, %F, %i, %c, %k */
+			p += 2;
+			in_space = 1;
+			continue;
+		}
+		if (*p == ' ') {
+			if (!in_space)
+				sbuf_concat(cleaned, " ");
+			in_space = 1;
+		} else {
+			sbuf_nconcat(cleaned, p, 1);
+			in_space = 0;
+		}
+		p++;
+	}
+
+	/* Trim trailing spaces */
+	char *result = xstrdup(sbuf_get(cleaned));
+	int len = strlen(result);
+	while (len > 0 && result[len - 1] == ' ')
+		result[--len] = '\0';
+
+	sbuf_free(cleaned);
+	return result;
+}
+
+/* Display application list with selection highlight */
+static void
+show_app_list_with_selection(rp_screen *s, struct list_head *apps, struct desktop_app *selected)
+{
+	struct sbuf *bar_buffer;
+	int mark_start = 0;
+	int mark_end = 0;
+	struct desktop_app *app;
+
+	bar_buffer = sbuf_new(0);
+
+	list_for_each_entry(app, apps, node) {
+		if (app == selected)
+			mark_start = strlen(sbuf_get(bar_buffer));
+
+		sbuf_concat(bar_buffer, app->name);
+
+		if (app == selected)
+			mark_end = strlen(sbuf_get(bar_buffer));
+
+		if (app->node.next != apps)
+			sbuf_concat(bar_buffer, "\n");
+	}
+
+	if (strlen(sbuf_get(bar_buffer)) == 0)
+		sbuf_copy(bar_buffer, "No applications found");
+
+	marked_message(sbuf_get(bar_buffer), mark_start, mark_end, BAR_IS_MESSAGE);
+	sbuf_free(bar_buffer);
+}
+
+/*
+ * Application launcher - reads .desktop files and displays them
+ * Similar to rofi -show drun but with simple white background and black text
+ * Uses the font set by "set font" command for consistency
+ */
+cmdret *
+cmd_applauncher(int interactive, struct cmdarg **args)
+{
+	struct list_head apps;
+	struct desktop_app *app, *tmp, *selected = NULL;
+	rp_screen *s;
+	KeySym ch;
+	unsigned int modifier;
+	char keysym_buf[513];
+	int done = 0;
+	Window focus;
+	int revert;
+
+	if (!interactive)
+		return cmdret_new(RET_FAILURE, "applauncher requires interactive mode");
+
+	s = rp_current_screen;
+
+	/* Initialize list and read desktop files */
+	INIT_LIST_HEAD(&apps);
+	read_desktop_dir("/usr/share/applications", &apps);
+	read_desktop_dir("/usr/local/share/applications", &apps);
+
+	/* Check if we found any apps */
+	if (list_empty(&apps))
+		return cmdret_new(RET_FAILURE, "No applications found");
+
+	/* Select first app */
+	selected = list_entry(apps.next, struct desktop_app, node);
+
+	/* Show bar with initial selection */
+	s->bar_is_raised = BAR_IS_MESSAGE;
+	XMapRaised(dpy, s->bar_window);
+	show_app_list_with_selection(s, &apps, selected);
+
+	/* Get current focus and set focus to key_window */
+	XGetInputFocus(dpy, &focus, &revert);
+	set_window_focus(s->key_window);
+	XSync(dpy, False);
+
+	/* Interactive selection loop */
+	while (!done) {
+		read_key(&ch, &modifier, keysym_buf, sizeof(keysym_buf));
+		modifier = x11_mask_to_rp_mask(modifier);
+
+		switch (ch) {
+		case XK_Down:
+		case XK_j:
+			/* Move to next application */
+			if (selected->node.next != &apps)
+				selected = list_entry(selected->node.next, struct desktop_app, node);
+			show_app_list_with_selection(s, &apps, selected);
+			break;
+
+		case XK_Up:
+		case XK_k:
+			/* Move to previous application */
+			if (selected->node.prev != &apps)
+				selected = list_entry(selected->node.prev, struct desktop_app, node);
+			show_app_list_with_selection(s, &apps, selected);
+			break;
+
+		case XK_Return:
+		case XK_KP_Enter:
+			/* Launch the selected application */
+			if (selected) {
+				char *cmd = clean_exec_field(selected->exec);
+				spawn(cmd, current_frame(rp_current_vscreen));
+				free(cmd);
+			}
+			done = 1;
+			break;
+
+		case XK_Escape:
+		case XK_g:	/* Emacs-style abort */
+			/* Cancel without launching */
+			done = 1;
+			break;
+
+		default:
+			/* Ignore other keys */
+			break;
+		}
+	}
+
+	/* Restore focus */
+	set_window_focus(focus);
+
+	/* Hide the bar */
+	hide_bar(s, 0);
+
+	/* Clean up */
+	list_for_each_entry_safe(app, tmp, &apps, node) {
+		list_del(&app->node);
+		free(app->name);
+		free(app->exec);
+		free(app);
+	}
 
 	return cmdret_new(RET_SUCCESS, NULL);
 }
