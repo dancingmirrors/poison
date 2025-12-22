@@ -428,6 +428,8 @@ draw_string(rp_screen *s, char *msg, int mark_start, int mark_end)
     /* Print the last line. */
     draw_partial_string(s, msg + start, part_len, x_offset, y_offset,
                         style, NULL);
+
+    XSync(dpy, False);
 }
 #undef REASON_NONE
 #undef REASON_STYLE
@@ -485,6 +487,8 @@ static void prepare_bar(rp_screen *s, int width, int height, int bar_type)
     XClearWindow(dpy, s->bar_window);
 
     raise_utility_windows();
+
+    XSync(dpy, False);
 }
 
 static void
