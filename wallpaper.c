@@ -20,7 +20,6 @@
 #define STBI_ONLY_BMP
 #include "stb_image.h"
 
-#include "wallpaper.h"
 #include "poison.h"
 
 void

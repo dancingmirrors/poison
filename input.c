@@ -79,7 +79,7 @@ void update_modifier_map(void)
     unsigned int modmasks[] = { Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask,
         Mod5Mask
     };
-    int row, col;               /* The row and column in the modifier table.  */
+    int row, col;               /* The row and column in the modifier table. */
     int found_alt_or_meta;
     XModifierKeymap *mods;
     int min_code, max_code;

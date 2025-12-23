@@ -20,7 +20,6 @@
 #include <string.h>
 
 #include "poison.h"
-#include "sbuf.h"
 
 struct sbuf *sbuf_new(size_t initsz)
 {

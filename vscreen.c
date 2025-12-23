@@ -325,7 +325,7 @@ struct numset *vscreen_get_numset(rp_vscreen *v)
 
 /*
  * Get the vscreen list and store it in buffer delimiting each window with
- * delim.  mark_start and mark_end will be filled with the text positions for
+ * delim. mark_start and mark_end will be filled with the text positions for
  * the start and end of the current window.
  */
 void

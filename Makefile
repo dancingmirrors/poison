@@ -18,7 +18,7 @@ COMMONER_CFLAGS=	-O3 -Wall -Wextra `pkg-config --cflags ${COMMONER_PKGLIBS}` \
 			-DVERSION=\"${VERSION}\"
 COMMONER_LDFLAGS=	`pkg-config --libs ${COMMONER_PKGLIBS}` -lm
 
-CFLAGS+=	-g -DDEBUG=1
+#CFLAGS+=	-g -DDEBUG=1
 #CFLAGS+=	-DINPUT_DEBUG=1
 #CFLAGS+=	-DSENDCMD_DEBUG=1
 

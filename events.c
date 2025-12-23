@@ -535,7 +535,7 @@ static void handle_key(KeySym ks, unsigned int mod, rp_screen *s)
 
     /*
      * Read a key and execute the command associated with it on the default
-     * keymap.  Ignore the key if it doesn't have a binding.
+     * keymap. Ignore the key if it doesn't have a binding.
      */
     if ((key_action = find_keybinding(ks, x11_mask_to_rp_mask(mod), map))) {
         cmdret *result;

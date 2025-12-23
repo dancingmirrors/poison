@@ -661,7 +661,7 @@ void remove_frame(rp_frame *frame)
 
         /*
          * If the area is bigger than before, the frame takes up too
-         * much space.  If the current frame and the deleted frame
+         * much space. If the current frame and the deleted frame
          * DON'T overlap then the current window took up just the right
          * amount of space but didn't take up the space left behind by
          * the deleted window. If any active frames overlap, it could

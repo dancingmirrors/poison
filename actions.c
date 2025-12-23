@@ -32,7 +32,6 @@
 #include <dirent.h>
 
 #include "poison.h"
-#include "wallpaper.h"
 
 /* arg_REST and arg_SHELLCMD eat the rest of the input. */
 enum argtype {
@@ -1782,7 +1781,7 @@ static cmdret *read_frame(struct sbuf *s, struct cmdarg **arg)
     if (frame) {
         /*
          * We have to return a string, because commands get lists of
-         * strings.  Sucky, yes. The command is simply going to parse
+         * strings. Sucky, yes. The command is simply going to parse
          * it back into an rp_frame.
          */
         *arg = xmalloc(sizeof(struct cmdarg));
@@ -2218,7 +2217,7 @@ static cmdret *fill_in_missing_args(struct user_command *cmd,
  * Stick a list of sbuf's in list. if nargs >= 0 then only parse nargs
  * arguments and and the rest of the string to the list. Return 0 on success.
  * non-zero on failure. When raw is true, then when we hit nargs, we should
- * keep any whitespace at the beginning.  When false, gobble the whitespace.
+ * keep any whitespace at the beginning. When false, gobble the whitespace.
  */
 static cmdret *parse_args(char *str, struct list_head *list, int nargs,
                           int raw)

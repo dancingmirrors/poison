@@ -405,7 +405,7 @@ extern "C" {
 //
 
     typedef struct {
-        int (*read)(void *user, char *data, int size);  // fill 'data' with 'size' bytes.  return number of bytes actually read
+        int (*read)(void *user, char *data, int size);  // fill 'data' with 'size' bytes. return number of bytes actually read
         void (*skip)(void *user, int n);        // skip the next 'n' bytes, or 'unget' the last -n bytes if negative
         int (*eof)(void *user); // returns nonzero if we are at end of file/data
     } stbi_io_callbacks;
@@ -7111,10 +7111,10 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp,
         return stbi__errpuc("wrong color format",
                             "PSD is not in RGB color format");
 
-    // Skip the Mode Data.  (It's the palette for indexed color; other info for other modes.)
+    // Skip the Mode Data. (It's the palette for indexed color; other info for other modes.)
     stbi__skip(s, stbi__get32be(s));
 
-    // Skip the image resources.  (resolution, pen tool paths, etc)
+    // Skip the image resources. (resolution, pen tool paths, etc.)
     stbi__skip(s, stbi__get32be(s));
 
     // Skip the reserved data.
@@ -7181,7 +7181,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp,
         }
 
     } else {
-        // We're at the raw image data.  It's each channel in order (Red, Green, Blue, Alpha, ...)
+        // We're at the raw image data. It's each channel in order (Red, Green, Blue, Alpha, ...)
         // where each channel consists of an 8-bit (or 16-bit) value for each pixel in the image.
 
         // Read the data by channel.

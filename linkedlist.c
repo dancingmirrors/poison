@@ -211,7 +211,7 @@ static struct list_head *merge(void *priv,
 
 /*
  * Combine final list merge with restoration of standard doubly-linked
- * list structure.  This approach duplicates code from merge(), but
+ * list structure. This approach duplicates code from merge(), but
  * runs faster than the tidier alternatives of either a separate final
  * prev-link restoration pass, or maintaining the prev links
  * throughout.

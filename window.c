@@ -105,7 +105,7 @@ char *window_name(rp_window *win)
 
 /*
  * FIXME: we need to verify that the window is running on the same host as
- * something.  otherwise there could be overlapping PIDs.
+ * something. Otherwise there could be overlapping PIDs.
  */
 struct rp_child_info *get_child_info(Window w, int add)
 {
@@ -561,7 +561,7 @@ void get_current_window_in_fmt(char *fmt, struct sbuf *buffer)
 
 /*
  * get the window list and store it in buffer delimiting each window with
- * delim.  mark_start and mark_end will be filled with the text positions for
+ * delim. mark_start and mark_end will be filled with the text positions for
  * the start and end of the current window.
  */
 void
