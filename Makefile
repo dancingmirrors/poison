@@ -1,8 +1,8 @@
-VERSION=	1.6
+VERSION=1.6
 
-VERSION!=	[ -d .git ] && \
-		echo "git-`git describe --always --abbrev=0`" || \
-		echo "${VERSION}"
+VERSION!=[ -d .git ] && \
+	echo "git-`git describe --always --abbrev=0`" || \
+	echo "${VERSION}"
 
 CC?=		cc
 PREFIX?=	/usr/local
@@ -34,6 +34,9 @@ all: poison commoner
 
 poison: $(OBJ)
 	$(CC) -o $@ $(OBJ) $(LDFLAGS)
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
 
 commoner.o: commoner.c commoner.h
 	$(CC) $(COMMONER_CFLAGS) -c commoner.c
