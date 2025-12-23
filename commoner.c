@@ -1437,7 +1437,8 @@ static void check_unredirect(Display *dpy)
     for (w = list; w; w = w->next) {
         if (w->a.map_state == IsViewable && !w->destroyed &&
             w->opacity == OPAQUE && is_fullscreen(w)) {
-            if (w->window_type == WINTYPE_SPLASH ||
+            if (w->window_type == WINTYPE_DOCK ||
+                w->window_type == WINTYPE_SPLASH ||
                 w->window_type == WINTYPE_TOOLTIP ||
                 w->window_type == WINTYPE_NOTIFY ||
                 w->window_type == WINTYPE_MENU ||
@@ -1756,11 +1757,18 @@ static void map_win(Display *dpy, Window id)
         } else {
             w->target_opacity = OPAQUE;
         }
-        w->opacity = 0;
+        if (w->window_type == WINTYPE_DOCK ||
+            w->window_type == WINTYPE_SPLASH ||
+            w->window_type == WINTYPE_TOOLTIP) {
+            w->opacity = w->target_opacity;
+        } else {
+            w->opacity = 0;
+        }
         if (fade_debug) {
             fprintf(stderr,
-                    "[map_win] set target=%u, starting fade-in from 0\n",
-                    w->target_opacity);
+                    "[map_win] set target=%u, starting %s\n",
+                    w->target_opacity,
+                    (w->opacity == 0) ? "fade-in from 0" : "instantly");
         }
     } else {
         w->target_opacity = w->opacity;
@@ -1829,7 +1837,13 @@ static void unmap_win(Display *dpy, Window id)
     set_paint_ignore_region_dirty();
 
     if (fade_enabled) {
-        set_target_opacity(dpy, w, 0);
+        if (w->window_type == WINTYPE_DOCK ||
+            w->window_type == WINTYPE_SPLASH ||
+            w->window_type == WINTYPE_TOOLTIP) {
+            finish_unmap_win(dpy, w);
+        } else {
+            set_target_opacity(dpy, w, 0);
+        }
     } else {
         finish_unmap_win(dpy, w);
     }
