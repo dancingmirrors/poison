@@ -2678,6 +2678,11 @@ cmdret *cmd_windows(int interactive, struct cmdarg **args)
             hide_bar(s, 0);
             return ret;
         }
+        /* Don't show window list if there are no managed windows */
+        if (list_empty(&rp_current_vscreen->mapped_windows)) {
+            message(MESSAGE_NO_MANAGED_WINDOWS);
+            return ret;
+        }
         show_bar(s, fmt);
     } else {
         window_list = sbuf_new(0);

@@ -37,6 +37,10 @@ static char *last_msg = NULL;
 static int last_mark_start = 0;
 static int last_mark_end = 0;
 
+/* Saved focus window when showing window list bar */
+static Window saved_focus = None;
+static int saved_revert = RevertToPointerRoot;
+
 static void draw_partial_string(rp_screen * s, char *msg, int len,
                                 int x_offset, int y_offset, int style,
                                 char *color);
@@ -77,6 +81,13 @@ void hide_bar(rp_screen *s, int force)
     s->bar_is_raised = BAR_IS_HIDDEN;
     XUnmapWindow(dpy, s->bar_window);
 
+    /* Restore focus if we saved it when showing window list */
+    if (saved_focus != None) {
+        set_window_focus(saved_focus);
+        saved_focus = None;
+        saved_revert = RevertToPointerRoot;
+    }
+
     /* Possibly restore colormap. */
     if (current_window()) {
         XUninstallColormap(dpy, s->def_cmap);
@@ -97,6 +108,14 @@ void show_bar(rp_screen *s, char *fmt)
     XInstallColormap(dpy, s->def_cmap);
 
     raise_utility_windows();
+
+    /* Save current focus and set focus to key_window to receive Escape key */
+    if (saved_focus == None) {
+        XGetInputFocus(dpy, &saved_focus, &saved_revert);
+        set_window_focus(s->key_window);
+        /* Sync to ensure focus change takes effect before keypresses arrive */
+        XSync(dpy, False);
+    }
 
     bar_reset_alarm();
 }

@@ -519,6 +519,15 @@ static void handle_key(KeySym ks, unsigned int mod, rp_screen *s)
     }
     PRINT_DEBUG(("handling key...\n"));
 
+    /* Check if Escape is pressed while the window list is displayed */
+    if (ks == XK_Escape && s->bar_is_raised == BAR_IS_WINDOW_LIST) {
+        hide_bar(s, 0);
+        hide_frame_indicator();
+        alarm(0);
+        alarm_signalled = 0;
+        return;
+    }
+
     /* All functions hide the program bar and the frame indicator. */
     if (defaults.bar_timeout > 0)
         hide_bar(s, 1);
