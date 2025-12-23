@@ -247,7 +247,6 @@ static cmdret *cmd_remhook(int interactive, struct cmdarg **args);
 static cmdret *cmd_remove(int interactive, struct cmdarg **args);
 static cmdret *cmd_rename(int interactive, struct cmdarg **args);
 static cmdret *cmd_resize(int interactive, struct cmdarg **args);
-static cmdret *cmd_restart(int interactive, struct cmdarg **args);
 static cmdret *cmd_sdump(int interactive, struct cmdarg **args);
 static cmdret *cmd_set(int interactive, struct cmdarg **args);
 static cmdret *cmd_setenv(int interactive, struct cmdarg **args);
@@ -490,7 +489,6 @@ void init_user_commands(void)
     add_command("remove", cmd_remove, 0, 0, 0);
     add_command("resize", cmd_resize, 2, 0, 2,
                 "", arg_NUMBER, "", arg_NUMBER);
-    add_command("restart", cmd_restart, 0, 0, 0);
     add_command("sdump", cmd_sdump, 0, 0, 0);
     add_command("set", cmd_set, 2, 0, 0, "", arg_VARIABLE, "", arg_REST);
     add_command("setenv", cmd_setenv, 2, 2, 2,
@@ -827,10 +825,14 @@ void initialize_default_keybindings(void)
     add_keybinding(XK_o, RP_SUPER_MASK, "only", map);
     add_keybinding(XK_p, RP_SUPER_MASK, "applauncher", map);
     add_keybinding(XK_question, RP_SUPER_MASK, "help " ROOT_KEYMAP, map);
-    add_keybinding(XK_Up, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeup", map);
-    add_keybinding(XK_Down, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangedown", map);
-    add_keybinding(XK_Left, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeleft", map);
-    add_keybinding(XK_Right, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeright", map);
+    add_keybinding(XK_Up, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeup",
+                   map);
+    add_keybinding(XK_Down, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangedown",
+                   map);
+    add_keybinding(XK_Left, RP_SUPER_MASK | RP_SHIFT_MASK, "exchangeleft",
+                   map);
+    add_keybinding(XK_Right, RP_SUPER_MASK | RP_SHIFT_MASK,
+                   "exchangeright", map);
     add_keybinding(XK_v, RP_SUPER_MASK, "vsplit", map);
     add_keybinding(XK_w, RP_SUPER_MASK, "windows", map);
     add_keybinding(XK_Return, RP_SUPER_MASK | RP_SHIFT_MASK, "term", map);
@@ -4707,12 +4709,6 @@ cmdret *cmd_swap(int interactive, struct cmdarg **args)
     return cmdret_new(RET_SUCCESS, NULL);
 }
 
-cmdret *cmd_restart(int interactive, struct cmdarg **args)
-{
-    hup_signalled = 1;
-    return cmdret_new(RET_SUCCESS, NULL);
-}
-
 cmdret *cmd_focuslast(int interactive, struct cmdarg **args)
 {
     rp_frame *frame = find_last_frame(rp_current_vscreen);
@@ -4825,8 +4821,8 @@ cmdret *cmd_nextscreen(int interactive, struct cmdarg **args)
         return cmdret_new(RET_FAILURE, "nextscreen: no other screen");
 
     new_frame = vscreen_get_frame(new_screen->current_vscreen,
-                                  new_screen->current_vscreen->
-                                  current_frame);
+                                  new_screen->
+                                  current_vscreen->current_frame);
 
     set_active_frame(new_frame, 1);
 
@@ -4845,8 +4841,8 @@ cmdret *cmd_prevscreen(int interactive, struct cmdarg **args)
         return cmdret_new(RET_SUCCESS, "prevscreen: no other screen");
 
     new_frame = vscreen_get_frame(new_screen->current_vscreen,
-                                  new_screen->current_vscreen->
-                                  current_frame);
+                                  new_screen->
+                                  current_vscreen->current_frame);
 
     set_active_frame(new_frame, 1);
 

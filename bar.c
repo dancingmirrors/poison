@@ -67,25 +67,6 @@ static int bar_time_left(void)
     return left.it_value.tv_sec > 0;
 }
 
-int bar_mkfifo(void)
-{
-    char *config_dir;
-
-    config_dir = get_config_dir();
-    rp_glob_screen.bar_fifo_path = xsprintf("%s/bar", config_dir);
-    free(config_dir);
-
-    unlink(rp_glob_screen.bar_fifo_path);
-
-    if (mkfifo(rp_glob_screen.bar_fifo_path, S_IRUSR | S_IWUSR) == -1) {
-        warn("failed creating bar FIFO at %s",
-             rp_glob_screen.bar_fifo_path);
-        return 0;
-    }
-
-    return bar_open_fifo();
-}
-
 void init_bar(void)
 {
 }
@@ -668,45 +649,4 @@ void free_bar(void)
 {
     free(last_msg);
     last_msg = NULL;
-}
-
-int bar_open_fifo(void)
-{
-    rp_glob_screen.bar_fifo_fd = open(rp_glob_screen.bar_fifo_path,
-                                      O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-    if (rp_glob_screen.bar_fifo_fd == -1) {
-        warn("failed opening newly-created bar FIFO at %s",
-             rp_glob_screen.bar_fifo_path);
-        rp_glob_screen.bar_fifo_fd = -1;
-        return -1;
-    }
-
-    return 0;
-}
-
-void bar_read_fifo(void)
-{
-    ssize_t ret;
-
-    PRINT_DEBUG(("bar FIFO data to read\n"));
-
-    for (;;) {
-        char buf[256];
-        memset(buf, 0, sizeof(buf));
-        ret = read(rp_glob_screen.bar_fifo_fd, buf, sizeof(buf));
-        if (ret < 1) {
-            if (ret == 0)
-                PRINT_DEBUG(("FIFO %d closed, re-opening\n",
-                             rp_glob_screen.bar_fifo_fd));
-            else if (ret == -1 && errno != EAGAIN)
-                PRINT_DEBUG(("error reading bar FIFO: %s\n",
-                             strerror(errno)));
-
-            close(rp_glob_screen.bar_fifo_fd);
-            bar_open_fifo();
-            break;
-        }
-
-        /* Bar FIFO data is currently not used */
-    }
 }

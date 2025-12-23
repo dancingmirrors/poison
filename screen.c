@@ -316,11 +316,15 @@ static void init_screen(rp_screen *s)
      * is already a WM running and the X Error handler will catch it,
      * terminating us.
      */
+    PRINT_DEBUG(("Selecting events on root window 0x%lx for screen %d\n",
+                 RootWindow(dpy, screen_num), screen_num));
     XSelectInput(dpy, RootWindow(dpy, screen_num),
                  PropertyChangeMask | ColormapChangeMask
                  | SubstructureRedirectMask | SubstructureNotifyMask
                  | StructureNotifyMask);
     XSync(dpy, False);
+    PRINT_DEBUG(("Event selection successful for screen %d\n",
+                 screen_num));
 
     s->scratch_buffer = NULL;
 

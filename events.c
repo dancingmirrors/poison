@@ -480,8 +480,8 @@ static void client_msg(XClientMessageEvent *ev)
                     set_active_window(w);
                 else
                     blank_frame(vscreen_get_frame(win->vscreen,
-                                                  win->vscreen->
-                                                  current_frame));
+                                                  win->
+                                                  vscreen->current_frame));
             }
         } else {
             warnx("non-standard WM_CHANGE_STATE format");
@@ -583,8 +583,10 @@ static void property_notify(XEvent *ev)
 {
     rp_window *win;
 
-    PRINT_DEBUG(("atom: %ld (%s)\n", ev->xproperty.atom,
-                 XGetAtomName(dpy, ev->xproperty.atom)));
+    PRINT_DEBUG(("PropertyNotify: window=0x%lx, atom=%ld (%s), state=%d\n",
+                 ev->xproperty.window, ev->xproperty.atom,
+                 XGetAtomName(dpy, ev->xproperty.atom),
+                 ev->xproperty.state));
 
     win = find_window(ev->xproperty.window);
     if (!win)
@@ -936,15 +938,7 @@ static void handle_signals(void)
 
         chld_signalled = 0;
     }
-    if (hup_signalled > 0) {
-        PRINT_DEBUG(("restarting\n"));
-        hook_run(&rp_restart_hook);
-        /* Restart compositor - it will detect if already running and exit */
-        start_compositor();
-        clean_up();
-        execvp(myargv[0], myargv);
-    }
-    if (kill_signalled > 0) {
+    if (kill_signalled > 0 || hup_signalled > 0) {
         PRINT_DEBUG(("exiting\n"));
         hook_run(&rp_quit_hook);
         clean_up();
@@ -961,40 +955,18 @@ static void handle_signals(void)
 /* The main loop. */
 void listen_for_events(void)
 {
-    struct pollfd pfd[3];
-    int pollfifo = 1;
+    struct pollfd pfd[1];
 
     memset(&pfd, 0, sizeof(pfd));
     pfd[0].fd = ConnectionNumber(dpy);
     pfd[0].events = POLLIN;
-    pfd[1].fd = rp_glob_screen.control_socket_fd;
-    pfd[1].events = POLLIN;
-    pfd[2].fd = rp_glob_screen.bar_fifo_fd;
-    pfd[2].events = POLLIN;
 
     /* Loop forever. */
     for (;;) {
         handle_signals();
 
         if (!XPending(dpy)) {
-            if (pollfifo && rp_glob_screen.bar_fifo_fd == -1)
-                pollfifo = 0;
-            else if (pollfifo)
-                pfd[2].fd = rp_glob_screen.bar_fifo_fd;
-
-            poll(pfd, pollfifo ? 3 : 2, -1);
-
-            if (pollfifo && (pfd[2].revents & (POLLERR | POLLNVAL))) {
-                warnx("error polling on FIFO");
-                pollfifo = 0;
-                continue;
-            }
-
-            if (pollfifo && (pfd[2].revents & (POLLHUP | POLLIN)))
-                bar_read_fifo();
-
-            if (pfd[1].revents & (POLLHUP | POLLIN))
-                receive_command();
+            poll(pfd, 1, -1);
 
             if (!XPending(dpy))
                 continue;

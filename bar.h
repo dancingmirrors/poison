@@ -28,7 +28,6 @@
 
 #define BAR_IS_RAISED(s)	(s->bar_is_raised != BAR_IS_HIDDEN)
 
-int bar_mkfifo(void);
 void init_bar(void);
 void bar_reset_alarm(void);
 void update_window_names(rp_screen * s, char *fmt);
@@ -46,8 +45,5 @@ void marked_message_printf(int mark_start, int mark_end, char *fmt, ...);
 void redraw_last_message(void);
 void show_last_message(void);
 void free_bar(void);
-
-int bar_open_fifo(void);
-void bar_read_fifo(void);
 
 #endif                          /* ! _POISON_BAR_H */

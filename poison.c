@@ -67,7 +67,7 @@ static void print_help(void)
 {
     printf("%s %s\n", PROGNAME, VERSION);
     printf("usage: %s [-h]\n", PROGNAME);
-    printf("       %s [-d dpy] [-c cmd] [-i] [-f file]\n", PROGNAME);
+    printf("       %s [-d dpy] [-f file]\n", PROGNAME);
     exit(0);
 }
 
@@ -176,10 +176,7 @@ static void init_shape(void)
 int main(int argc, char *argv[])
 {
     int c, fd;
-    char **cmd = NULL;
-    int cmd_count = 0;
     char *display = NULL;
-    int interactive = 0;
     char *alt_rcfile = NULL;
     char pid[8];
 
@@ -193,12 +190,8 @@ int main(int argc, char *argv[])
 
     /* Parse the arguments */
     myargv = argv;
-    while ((c = getopt(argc, argv, "c:d:hif:")) != -1) {
+    while ((c = getopt(argc, argv, "d:hf:")) != -1) {
         switch (c) {
-        case 'c':
-            cmd = xrealloc(cmd, sizeof(char *) * (cmd_count + 1));
-            cmd[cmd_count++] = xstrdup(optarg);
-            break;
         case 'd':
             display = optarg;
             break;
@@ -207,9 +200,6 @@ int main(int argc, char *argv[])
             break;
         case 'h':
             print_help();
-            break;
-        case 'i':
-            interactive = 1;
             break;
         default:
             warnx("unsupported option %c", c);
@@ -241,22 +231,6 @@ int main(int argc, char *argv[])
     xa_string = XA_STRING;
     xa_compound_text = XInternAtom(dpy, "COMPOUND_TEXT", False);
     xa_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
-
-    init_control_socket_path();
-
-    if (cmd_count > 0) {
-        int j, exit_status = 0;
-
-        for (j = 0; j < cmd_count; j++) {
-            if (!send_command(interactive, cmd[j]))
-                exit_status = 1;
-            free(cmd[j]);
-        }
-
-        free(cmd);
-        XCloseDisplay(dpy);
-        return exit_status;
-    }
 
     /* For child processes to know */
     snprintf(pid, sizeof(pid), "%d", getpid());
@@ -304,9 +278,6 @@ int main(int argc, char *argv[])
     set_sig_handler(SIGHUP, hup_handler);
     set_sig_handler(SIGCHLD, chld_handler);
 
-    if (bar_mkfifo() == -1)
-        return 1;
-
     /* Setup our internal structures */
     init_defaults();
     init_window_stuff();
@@ -342,7 +313,6 @@ int main(int argc, char *argv[])
     pledge("stdio rpath cpath wpath fattr unix proc exec", NULL);
 #endif
 
-    listen_for_commands();
     listen_for_events();
 
     return 0;

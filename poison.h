@@ -84,7 +84,6 @@ do {                                            \
 #include "number.h"
 #include "input.h"
 #include "messages.h"
-#include "communications.h"
 #include "sbuf.h"
 #include "split.h"
 #include "frame.h"
