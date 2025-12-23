@@ -3697,12 +3697,6 @@ cmdret *cmd_help(int interactive, struct cmdarg **args)
 
         XMapRaised(dpy, s->help_window);
 
-        rp_draw_string(s, s->help_window, STYLE_NORMAL,
-                       x, y + FONT_ASCENT(s), PROGNAME " key bindings", -1,
-                       NULL, NULL);
-
-        y += FONT_HEIGHT(s) * 2;
-
         /* Only print the "Command key" for the root keymap */
         if (map == find_keymap(ROOT_KEYMAP)) {
             rp_draw_string(s, s->help_window, STYLE_NORMAL,
