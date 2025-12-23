@@ -134,6 +134,14 @@ void show_vscreen_bar(rp_screen *s)
 
     raise_utility_windows();
 
+    /* Save current focus and set focus to key_window to receive input */
+    if (saved_focus == None) {
+        XGetInputFocus(dpy, &saved_focus, &saved_revert);
+        set_window_focus(s->key_window);
+        /* Sync to ensure focus change takes effect before keypresses arrive */
+        XSync(dpy, False);
+    }
+
     bar_reset_alarm();
 }
 
@@ -482,6 +490,14 @@ static void prepare_bar(rp_screen *s, int width, int height, int bar_type)
         if (current_window())
             XUninstallColormap(dpy, current_window()->colormap);
         XInstallColormap(dpy, s->def_cmap);
+
+        /* Save current focus and set focus to key_window to receive input */
+        if (saved_focus == None) {
+            XGetInputFocus(dpy, &saved_focus, &saved_revert);
+            set_window_focus(s->key_window);
+            /* Sync to ensure focus change takes effect before keypresses arrive */
+            XSync(dpy, False);
+        }
     }
     XRaiseWindow(dpy, s->bar_window);
     XClearWindow(dpy, s->bar_window);
