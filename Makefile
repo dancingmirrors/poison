@@ -1,7 +1,7 @@
 VERSION=1.6
 
 VERSION!=[ -d .git ] && \
-	echo "git-`git describe --always --abbrev=0`" || \
+	echo "`git describe --always --abbrev=0`" || \
 	echo "${VERSION}"
 
 CC?=		cc
