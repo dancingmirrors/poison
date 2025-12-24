@@ -13,6 +13,7 @@
 #include <string.h>
 #include <math.h>
 #include <err.h>
+#include <unistd.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -235,8 +236,8 @@ parse_geometry(const char *geom, int *x, int *y, int *w, int *h,
     return *flags != 0;
 }
 
-/* Apply image to background buffer */
-static void
+/* Apply image to background buffer. Returns 0 on success, -1 on failure. */
+static int
 apply_image(struct wallpaper_state *state, unsigned char *bg,
             const char *image_file, int is_emblem)
 {
@@ -248,12 +249,12 @@ apply_image(struct wallpaper_state *state, unsigned char *bg,
     int alpha = is_emblem ? state->emblem_alpha : 255;
 
     if (!image_file)
-        return;
+        return 0;
 
     img_data = stbi_load(image_file, &img_w, &img_h, &img_channels, 4);
     if (!img_data) {
         warnx("cannot load image: %s", image_file);
-        return;
+        return -1;
     }
 
     /* Parse geometry if provided */
@@ -328,6 +329,7 @@ apply_image(struct wallpaper_state *state, unsigned char *bg,
                 state->width, state->height, alpha);
 
     stbi_image_free(img_data);
+    return 0;
 }
 
 /* Create X11 pixmap from RGBA buffer */
@@ -403,9 +405,20 @@ static void set_root_pixmap(Display *dpy, int screen, Pixmap pixmap)
     unsigned char *data_esetroot = NULL;
     Pixmap old_pixmap;
 
+    if (!pixmap) {
+        warnx("set_root_pixmap: invalid pixmap");
+        return;
+    }
+
     esetroot_pmap_id = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
     xrootpmap_id = XInternAtom(dpy, "_XROOTPMAP_ID", False);
 
+    /*
+     * XGrabServer is used to prevent race conditions when updating root
+     * window properties atomically. We must ensure XUngrabServer is always
+     * called, even if operations fail.
+     */
+    XSync(dpy, False);
     XGrabServer(dpy);
 
     /* Check for existing pixmap and free it */
@@ -415,7 +428,11 @@ static void set_root_pixmap(Display *dpy, int screen, Pixmap pixmap)
                            &data_esetroot) == Success) {
         if (type == XA_PIXMAP && format == 32 && nitems == 1) {
             old_pixmap = *((Pixmap *) data_esetroot);
-            XKillClient(dpy, old_pixmap);
+            /*
+             * Use XFreePixmap instead of XKillClient to avoid killing
+             * ourselves when replacing our own wallpaper.
+             */
+            XFreePixmap(dpy, old_pixmap);
         }
         if (data_esetroot)
             XFree(data_esetroot);
@@ -429,16 +446,16 @@ static void set_root_pixmap(Display *dpy, int screen, Pixmap pixmap)
 
     /* Set as background */
     XSetWindowBackgroundPixmap(dpy, root, pixmap);
-    XClearWindow(dpy, root);
 
     XUngrabServer(dpy);
-    XFlush(dpy);
+    XSync(dpy, False);
 }
 
 int wallpaper_apply(struct wallpaper_state *state)
 {
     unsigned char *buffer;
     Pixmap pixmap;
+    int ret;
 
     /* Create background gradient or solid color */
     buffer = create_gradient(state);
@@ -453,8 +470,13 @@ int wallpaper_apply(struct wallpaper_state *state)
     }
 
     /* Apply main image */
-    if (state->image_file)
-        apply_image(state, buffer, state->image_file, 0);
+    if (state->image_file) {
+        ret = apply_image(state, buffer, state->image_file, 0);
+        if (ret < 0) {
+            free(buffer);
+            return -1;
+        }
+    }
 
     /* Apply emblem overlay if different from main image */
     if (state->emblem_file && (!state->image_file ||
