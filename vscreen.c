@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 joshua stein <jcs@jcs.org>
+ * Copyright © 2019 Joshua Stein <jcs@jcs.org>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free

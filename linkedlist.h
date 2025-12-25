@@ -1,8 +1,8 @@
 /*
- * This file was taken from the Linux kernel and is Copyright (C) 2003 Linus
+ * This file was taken from the Linux kernel and is Copyright © 2003 Linus
  * Torvalds
  *
- * Modified by Shawn Betts. Portions created by Shawn Betts are Copyright (C)
+ * Modified by Shawn Betts. Portions created by Shawn Betts are Copyright ©
  * 2003, 2004 Shawn Betts
  *
  * This program is free software; you can redistribute it and/or modify it

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017
+ * Copyright © 2017
  * Jeremie Courreges-Anglas <jca@wxcvcbn.org>
  *
  * This program is free software; you can redistribute it and/or modify it

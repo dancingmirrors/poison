@@ -1,6 +1,6 @@
 /*
- * functions for grabbing information about xrandr screens
- * Copyright (C) 2016 Mathieu OTHACEHE <m.othacehe@gmail.com>
+ * Functions for grabbing information about xrandr screens.
+ * Copyright © 2016 Mathieu OTHACEHE <m.othacehe@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free

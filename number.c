@@ -1,6 +1,6 @@
 /*
- * handles the handing out of and uniqueness of window numbers.
- * Copyright (C) 2000, 2001, 2002, 2003, 2004 Shawn Betts <sabetts@vcn.bc.ca>
+ * Handles the handing out of and uniqueness of window numbers.
+ * Copyright © 2000, 2001, 2002, 2003, 2004 Shawn Betts <sabetts@vcn.bc.ca>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -141,7 +141,7 @@ struct numset *numset_new(void)
     return ns;
 }
 
-/* Free a numset structure and it's internal data. */
+/* Free a numset structure and its internal data. */
 void numset_free(struct numset *ns)
 {
     free(ns->numbers_taken);
