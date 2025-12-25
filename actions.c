@@ -5429,8 +5429,8 @@ cmdret *cmd_sfrestore(int interactively, struct cmdarg **args)
         push_frame_undo(screen->current_vscreen);       /* fdump to stack */
 
         /*
-         * XXX save the failure of each frestore and display it in case
-         * of error
+         * Save the failure of each frestore and display it in case
+         * of error.
          */
         ret = frestore(sbuf_get(screen->scratch_buffer),
                        screen->current_vscreen);

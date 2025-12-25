@@ -736,7 +736,7 @@ static void selection_request(XSelectionRequestEvent *rq)
     CARD32 target_list[4];
     Atom target;
     static Atom xa_targets = None;
-    static Atom xa_text = None; /* XXX */
+    static Atom xa_text = None;
     XTextProperty ct;
     XICCEncodingStyle style;
     char *cl[4];
