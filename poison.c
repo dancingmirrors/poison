@@ -66,8 +66,12 @@ static int handler(Display *d, XErrorEvent *e)
 static void print_help(void)
 {
     printf("%s %s\n", PROGNAME, VERSION);
-    printf("usage: %s [-h]\n", PROGNAME);
+    printf("usage: %s [-h] [-v]\n", PROGNAME);
     printf("       %s [-d dpy] [-f file]\n", PROGNAME);
+    printf("  -h, --help       Show this help\n");
+    printf("  -v, --version    Show version information\n");
+    printf("  -d dpy           Display to connect to\n");
+    printf("  -f file          Alternative config file\n");
     exit(0);
 }
 
@@ -179,6 +183,11 @@ int main(int argc, char *argv[])
     char *display = NULL;
     char *alt_rcfile = NULL;
     char pid[8];
+    static const struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"version", no_argument, NULL, 'v'},
+        {0, 0, 0, 0}
+    };
 
     setlocale(LC_CTYPE, "");
 
@@ -190,7 +199,7 @@ int main(int argc, char *argv[])
 
     /* Parse the arguments */
     myargv = argv;
-    while ((c = getopt(argc, argv, "d:hf:")) != -1) {
+    while ((c = getopt_long(argc, argv, "d:hf:v", long_options, NULL)) != -1) {
         switch (c) {
         case 'd':
             display = optarg;
@@ -200,6 +209,10 @@ int main(int argc, char *argv[])
             break;
         case 'h':
             print_help();
+            break;
+        case 'v':
+            printf("%s %s\n", PROGNAME, VERSION);
+            exit(0);
             break;
         default:
             warnx("unsupported option %c", c);
