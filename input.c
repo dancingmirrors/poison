@@ -530,13 +530,12 @@ char *get_more_input(char *prompt, char *preinput,
     }
 
     XUnmapWindow(dpy, s->input_window);
-
     /*
-     * XXX: Without this, the input window doesn't show up again if we need
-     * to prompt the user for more input, until the user types a character.
-     * Figure out what is actually causing this and remove this.
+     * Sync to ensure the unmap is processed before any subsequent map
+     * operations. Without this, rapid successive prompts can fail to display
+     * until another event triggers synchronization.
      */
-    usleep(1);
+    XSync(dpy, False);
 
     return final_input;
 }

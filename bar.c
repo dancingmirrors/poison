@@ -93,6 +93,13 @@ void hide_bar(rp_screen *s, int force)
         XUninstallColormap(dpy, s->def_cmap);
         XInstallColormap(dpy, current_window()->colormap);
     }
+
+    /*
+     * Sync to ensure window unmap and focus/colormap restoration are
+     * processed before subsequent operations. This prevents race conditions
+     * when rapidly switching between UI elements (e.g., window list to console).
+     */
+    XSync(dpy, False);
 }
 
 /* Show window listing in bar. */
