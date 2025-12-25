@@ -987,9 +987,6 @@ extern int rp_honour_vscreen_switch;
 /* Keep track of X11 error messages. */
 extern char *rp_error_msg;
 
-/* Number sets for windows. */
-extern struct numset *rp_window_numset;
-
 extern struct list_head rp_key_hook;
 extern struct list_head rp_switch_win_hook;
 extern struct list_head rp_switch_frame_hook;

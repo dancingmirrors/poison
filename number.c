@@ -1,5 +1,5 @@
 /*
- * Handles the handing out of and uniqueness of window numbers.
+ * Handles the handing out of and uniqueness of numbers.
  * Copyright © 2000, 2001, 2002, 2003, 2004 Shawn Betts <sabetts@vcn.bc.ca>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
 
 #include "poison.h"
 
-/* Keep track of a set of numbers. For frames and windows. */
+/* Keep track of a set of numbers. For frames, vscreens, and screens. */
 struct numset {
     /* A list of the numbers taken. */
     int *numbers_taken;
@@ -95,8 +95,7 @@ int numset_add_num(struct numset *ns, int n)
 }
 
 /*
- * returns a unique number that can be used as the window number in the program
- * bar.
+ * Returns a unique number from the numset.
  */
 int numset_request(struct numset *ns)
 {
@@ -113,8 +112,7 @@ int numset_request(struct numset *ns)
 }
 
 /*
- * When a window is destroyed, it gives back its window number with this
- * function.
+ * Release a number back to the numset.
  */
 void numset_release(struct numset *ns, int n)
 {

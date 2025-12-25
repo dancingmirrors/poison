@@ -19,9 +19,6 @@
 #include <err.h>
 #include "poison.h"
 
-rp_vscreen *vscreen_next(void);
-rp_vscreen *vscreen_prev(void);
-
 static int vscreen_access = 1;
 
 void init_vscreen(rp_vscreen *v, rp_screen *s)
@@ -66,18 +63,6 @@ void vscreen_del(rp_vscreen *v)
 
     list_del(&v->node);
     free(v);
-}
-
-rp_vscreen *vscreen_next(void)
-{
-    return list_next_entry(rp_current_screen->current_vscreen,
-                           &rp_current_screen->vscreens, node);
-}
-
-rp_vscreen *vscreen_prev(void)
-{
-    return list_prev_entry(rp_current_screen->current_vscreen,
-                           &rp_current_screen->vscreens, node);
 }
 
 void vscreen_free(rp_vscreen *v)

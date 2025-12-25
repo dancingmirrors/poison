@@ -28,7 +28,7 @@
 LIST_HEAD(rp_unmapped_window);
 LIST_HEAD(rp_mapped_window);
 
-struct numset *rp_window_numset;
+
 
 static void set_active_window_body(rp_window * win, int force);
 
@@ -618,7 +618,6 @@ get_window_list(char *fmt, char *delim, struct sbuf *buffer,
 
 void init_window_stuff(void)
 {
-    rp_window_numset = numset_new();
 }
 
 void free_window_stuff(void)
@@ -638,8 +637,6 @@ void free_window_stuff(void)
         vscreen_del_window(cur->vscreen, cur);
         free_window(cur);
     }
-
-    numset_free(rp_window_numset);
 }
 
 rp_frame *win_get_frame(rp_window *win)
