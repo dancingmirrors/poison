@@ -28,8 +28,6 @@
 LIST_HEAD(rp_unmapped_window);
 LIST_HEAD(rp_mapped_window);
 
-
-
 static void set_active_window_body(rp_window * win, int force);
 
 /* Get the mouse position relative to the the specified window */
@@ -186,7 +184,8 @@ rp_window *add_to_window_list(rp_screen *s, Window w)
     new_window->hints = XAllocSizeHints();
     new_window->colormap = DefaultColormap(dpy, s->screen_num);
     new_window->transient = XGetTransientForHint(dpy, new_window->w,
-                                                 &new_window->transient_for);
+                                                 &new_window->
+                                                 transient_for);
     PRINT_DEBUG(("transient %d\n", new_window->transient));
     new_window->full_screen = 0;
     new_window->floated = 0;

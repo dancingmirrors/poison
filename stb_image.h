@@ -2421,8 +2421,8 @@ stbi_inline static int stbi__jpeg_huff_decode(stbi__jpeg *j,
     if (c < 0 || c >= 256)      // symbol id out of bounds!
         return -1;
     STBI_ASSERT((((j->code_buffer) >> (32 -
-                                       h->size[c])) & stbi__bmask[h->
-                                                                  size[c]])
+                                       h->
+                                       size[c])) & stbi__bmask[h->size[c]])
                 == h->code[c]);
 
     // convert the id to a symbol
@@ -3410,8 +3410,8 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                     short *data =
                         z->img_comp[n].coeff + 64 * (i +
                                                      j *
-                                                     z->img_comp[n].
-                                                     coeff_w);
+                                                     z->
+                                                     img_comp[n].coeff_w);
                     if (z->spec_start == 0) {
                         if (!stbi__jpeg_decode_block_prog_dc
                             (z, data, &z->huff_dc[z->img_comp[n].hd], n))
@@ -3449,10 +3449,8 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                                 short *data =
                                     z->img_comp[n].coeff + 64 * (x2 +
                                                                  y2 *
-                                                                 z->
-                                                                 img_comp
-                                                                 [n].
-                                                                 coeff_w);
+                                                                 z->img_comp
+                                                                 [n].coeff_w);
                                 if (!stbi__jpeg_decode_block_prog_dc
                                     (z, data,
                                      &z->huff_dc[z->img_comp[n].hd], n))
@@ -3496,8 +3494,8 @@ static void stbi__jpeg_finish(stbi__jpeg *z)
                     short *data =
                         z->img_comp[n].coeff + 64 * (i +
                                                      j *
-                                                     z->img_comp[n].
-                                                     coeff_w);
+                                                     z->
+                                                     img_comp[n].coeff_w);
                     stbi__jpeg_dequantize(data,
                                           z->dequant[z->img_comp[n].tq]);
                     z->idct_block_kernel(z->img_comp[n].data +

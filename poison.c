@@ -184,9 +184,9 @@ int main(int argc, char *argv[])
     char *alt_rcfile = NULL;
     char pid[8];
     static const struct option long_options[] = {
-        {"help", no_argument, NULL, 'h'},
-        {"version", no_argument, NULL, 'v'},
-        {0, 0, 0, 0}
+        { "help", no_argument, NULL, 'h' },
+        { "version", no_argument, NULL, 'v' },
+        { 0, 0, 0, 0 }
     };
 
     setlocale(LC_CTYPE, "");
@@ -199,7 +199,8 @@ int main(int argc, char *argv[])
 
     /* Parse the arguments */
     myargv = argv;
-    while ((c = getopt_long(argc, argv, "d:hf:v", long_options, NULL)) != -1) {
+    while ((c =
+            getopt_long(argc, argv, "d:hf:v", long_options, NULL)) != -1) {
         switch (c) {
         case 'd':
             display = optarg;

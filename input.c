@@ -141,7 +141,8 @@ void update_modifier_map(void)
                             modmasks[row - 3];
                         PRINT_INPUT_DEBUG(("Found "
                                            "Super on %d\n",
-                                           rp_modifier_info.super_mod_mask));
+                                           rp_modifier_info.
+                                           super_mod_mask));
                     }
                     code_col = syms_per_code;
                     col = mods->max_keypermod;
@@ -154,7 +155,8 @@ void update_modifier_map(void)
                             modmasks[row - 3];
                         PRINT_INPUT_DEBUG(("Found "
                                            "Hyper on %d\n",
-                                           rp_modifier_info.hyper_mod_mask));
+                                           rp_modifier_info.
+                                           hyper_mod_mask));
                     }
                     code_col = syms_per_code;
                     col = mods->max_keypermod;

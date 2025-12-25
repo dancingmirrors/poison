@@ -356,11 +356,11 @@ void resize_shrink_to_window(rp_frame *frame)
  */
 static int
 resize_frame(rp_frame *frame, rp_frame *pusher, int diff,
-             int (*c1)(rp_frame *), int (c2)(rp_frame *),
-             int (*c3)(rp_frame *), int (c4)(rp_frame *),
-             void (*resize1)(rp_frame *, int),
-             void (*resize2)(rp_frame *, int),
-             int (*resize3)(rp_frame *, rp_frame *, int))
+             int (*c1)(rp_frame *), int(c2)(rp_frame *),
+             int(*c3)(rp_frame *), int(c4)(rp_frame *),
+             void(*resize1)(rp_frame *, int),
+             void(*resize2)(rp_frame *, int),
+             int(*resize3)(rp_frame *, rp_frame *, int))
 {
     rp_vscreen *v = frame->vscreen;
     rp_frame *cur;
