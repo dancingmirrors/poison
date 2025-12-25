@@ -59,4 +59,11 @@ regress:
 clean:
 	rm -f poison commoner $(OBJ) commoner.o
 
+uninstall:
+	rm -f ${BINDIR}/poison
+	rm -f ${BINDIR}/commoner
+	rm -f ${FONTDIR}/poison.ttf
+	rm -f ${FONTDIR}/COPYING.font
+	rmdir ${FONTDIR}
+
 .PHONY: all install clean
