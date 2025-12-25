@@ -49,7 +49,7 @@ install: all
 	install -s poison $(BINDIR)
 	install -s commoner $(BINDIR)
 	mkdir -p $(FONTDIR)
-	install -m 644 PxPlus_IBM_VGA8.ttf $(FONTDIR)
+	install -m 644 poison.ttf $(FONTDIR)
 	install -m 644 COPYING.font $(FONTDIR)
 	fc-cache -f
 
