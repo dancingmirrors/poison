@@ -466,11 +466,10 @@ static void client_msg(XClientMessageEvent *ev)
             return;
         if (ev->format == 32 && ev->data.l[0] == IconicState) {
             /*
-             * FIXME: This means clients can hide themselves
-             * without the user's intervention. This is bad, but
-             * Emacs is the only program I know of that iconifies
-             * itself and this is generally from the user pressing
-             * C-z.
+             * Allow clients to iconify themselves via WM_CHANGE_STATE.
+             * While this lets clients hide without explicit user action,
+             * it's necessary for applications like Emacs that iconify
+             * on C-z (suspend).
              */
             PRINT_DEBUG(("Iconify Request.\n"));
             if (win->state == NormalState) {

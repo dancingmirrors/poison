@@ -202,8 +202,8 @@ static char *get_primary_selection(void)
         if (ct.value == NULL)
             continue;
         /*
-         * Accumulate the data. FIXME: ct.value may not be NULL
-         * terminated.
+         * Accumulate the data. sbuf_nconcat handles non-NULL-terminated
+         * strings correctly by using the exact length.
          */
         sbuf_nconcat(s, (const char *) ct.value, ct.nitems);
         XFree(ct.value);

@@ -170,23 +170,21 @@ char *completions_complete(rp_completions *c, char *partial, int direction)
         completions_update(c, partial);
 
         /*
-         * Since it's never been completed on and c->last_match points
-         * to the first element of the list which may be a match. So
-         * check it. FIXME: This is a bit of a hack.
+         * c->last_match points to the first element after update.
+         * Validate it's a match before returning it.
          */
         if (c->last_match == NULL)
             return NULL;
 
         /*
-         * c->last_match contains the first match in the forward
-         * direction. So if we're looking for the previous match, then
-         * check the previous element from last_match.
+         * For previous direction, start from the element before the
+         * first one.
          */
         if (direction == COMPLETION_PREVIOUS)
             c->last_match = list_prev_entry(c->last_match,
                                             &c->completion_list, node);
 
-        /* Now check if last_match is a match for partial. */
+        /* Check if last_match is a valid match for partial. */
         if (completions_match(c, sbuf_get(c->last_match), c->partial))
             return sbuf_get(c->last_match);
     }
