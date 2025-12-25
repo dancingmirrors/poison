@@ -1625,7 +1625,7 @@ static struct list_head *exec_completions(char *str)
     head = xmalloc(sizeof(struct list_head));
     INIT_LIST_HEAD(head);
 
-    /* FIXME: A Bash dependancy?? */
+    /* FIXME: A Bash dependency? */
     completion_string = xsprintf("bash -c \"compgen -ac %s|sort\"", str);
     file = popen(completion_string, "r");
     free(completion_string);
