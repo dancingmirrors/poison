@@ -1625,8 +1625,8 @@ static struct list_head *exec_completions(char *str)
     head = xmalloc(sizeof(struct list_head));
     INIT_LIST_HEAD(head);
 
-    /* FIXME: A Bash dependency? */
-    completion_string = xsprintf("bash -c \"compgen -ac %s|sort\"", str);
+    /* Try Bash if available. */
+    completion_string = xsprintf("/usr/bin/env bash -c \"compgen -ac %s|sort\"", str);
     file = popen(completion_string, "r");
     free(completion_string);
     if (!file) {
@@ -1755,9 +1755,21 @@ static cmdret *read_frame(struct sbuf *s, struct cmdarg **arg)
 
         free(wins);
 
-        /* FIXME: We only handle one character long keysym names. */
+        /*
+         * Handle both single-character keysym names and numeric keypad keys.
+         * Keypad keys have names like "KP_0" through "KP_9".
+         */
         if (strlen(keysym_buf) == 1) {
             fnum = frame_selector_match(keysym_buf[0]);
+            if (fnum == -1)
+                return cmdret_new(RET_FAILURE,
+                                  "unknown frame selector `%s'",
+                                  keysym_buf);
+        } else if (strlen(keysym_buf) == 4 && keysym_buf[0] == 'K' &&
+                   keysym_buf[1] == 'P' && keysym_buf[2] == '_' &&
+                   keysym_buf[3] >= '0' && keysym_buf[3] <= '9') {
+            /* Handle keypad numbers: KP_0 through KP_9 */
+            fnum = frame_selector_match(keysym_buf[3]);
             if (fnum == -1)
                 return cmdret_new(RET_FAILURE,
                                   "unknown frame selector `%s'",
