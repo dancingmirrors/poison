@@ -277,7 +277,7 @@ void vscreen_move_window(rp_vscreen *to, rp_window *w)
     w->vscreen = to;
     w->sticky_frame = EMPTY;
 
-    /* forget that this window was in the frame it was in */
+    /* Forget that this window was in the frame it was in */
     if (f)
         f->win_number = EMPTY;
 

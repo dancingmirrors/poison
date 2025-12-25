@@ -234,9 +234,11 @@ int main(int argc, char *argv[])
     set_close_on_exec(ConnectionNumber(dpy));
 
     /* forked commands should not get X console tty as their stdin */
-    fd = open("/dev/null", O_RDONLY);
-    dup2(fd, STDIN_FILENO);
-    close(fd);
+   fd = open("/dev/null", O_RDONLY);
+   if (fd >= 0) {
+        dup2(fd, STDIN_FILENO);
+        close(fd);
+    }
 
     /* Set our own specific Atoms. */
     rp_selection = XInternAtom(dpy, "RP_SELECTION", False);
