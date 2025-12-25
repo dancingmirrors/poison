@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <X11/extensions/shape.h>
 
@@ -102,8 +103,8 @@ char *window_name(rp_window *win)
 }
 
 /*
- * FIXME: we need to verify that the window is running on the same host as
- * something. Otherwise there could be overlapping PIDs.
+ * Verify that the window is running on the same host as the window manager.
+ * This prevents PID collisions from windows on different hosts.
  */
 struct rp_child_info *get_child_info(Window w, int add)
 {
@@ -113,6 +114,13 @@ struct rp_child_info *get_child_info(Window w, int add)
     unsigned long pid = 0;
     long nresults;
     int i;
+    char localhost[256];
+    char *client_machine = NULL;
+    int hostname_matches = 0;
+
+    /* Get local hostname for comparison */
+    if (gethostname(localhost, sizeof(localhost)) != 0)
+        localhost[0] = '\0';
 
     if (!get_atom(w, _net_wm_pid, XA_CARDINAL, 0, &pid, 1, NULL)) {
         PRINT_DEBUG(("Couldn't get _NET_WM_PID Property\n"));
@@ -136,12 +144,39 @@ struct rp_child_info *get_child_info(Window w, int add)
     PRINT_DEBUG(("NET_WM_PID: %ld\n", pid));
 
     if (pid) {
-        list_for_each_entry(cur, &rp_children, node)
-            if (pid == (unsigned long) cur->pid)
-            return cur;
+        /*
+         * Check WM_CLIENT_MACHINE to verify the window is on the same host.
+         * If the property is not set, assume localhost for compatibility.
+         */
+        if (get_atom(w, XA_WM_CLIENT_MACHINE, XA_STRING, 0,
+                     (unsigned long *) &client_machine, 0, NULL)) {
+            if (client_machine && localhost[0] != '\0') {
+                hostname_matches =
+                    (strcmp(client_machine, localhost) == 0);
+                XFree(client_machine);
+            } else {
+                /* No client machine or localhost - assume local */
+                hostname_matches = 1;
+            }
+        } else {
+            /* Property not set - assume localhost for compatibility */
+            hostname_matches = 1;
+        }
+
+        if (hostname_matches) {
+            list_for_each_entry(cur, &rp_children, node)
+                if (pid == (unsigned long) cur->pid)
+                return cur;
+        } else {
+            PRINT_DEBUG(("Skipping PID %ld from remote host\n", pid));
+        }
     }
 
     if (!add)
+        return NULL;
+
+    /* Only add child info if hostname matches (or couldn't be verified) */
+    if (!hostname_matches)
         return NULL;
 
     /*
@@ -184,8 +219,7 @@ rp_window *add_to_window_list(rp_screen *s, Window w)
     new_window->hints = XAllocSizeHints();
     new_window->colormap = DefaultColormap(dpy, s->screen_num);
     new_window->transient = XGetTransientForHint(dpy, new_window->w,
-                                                 &new_window->
-                                                 transient_for);
+                                                 &new_window->transient_for);
     PRINT_DEBUG(("transient %d\n", new_window->transient));
     new_window->full_screen = 0;
     new_window->floated = 0;

@@ -166,10 +166,6 @@ void frameset_free(struct list_head *head)
     struct list_head *iter, *tmp;
 
     list_for_each_safe_entry(frame, iter, tmp, head, node) {
-        /*
-         * FIXME: what if frame has memory inside its struct that
-         * needs to be freed?
-         */
         free(frame);
     }
 }
