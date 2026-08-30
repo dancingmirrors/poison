@@ -1,0 +1,7 @@
+hacks "0"
+hot_corner "1"
+hot_corner_threshold "600"
+idle_timeout "300000"
+notifications "0"
+padding "5"
+terminal "poison-terminal --maximize"

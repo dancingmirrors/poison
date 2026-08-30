@@ -1,0 +1,103 @@
+.TH POISON 1 "August 2026" "poison 0.83" "User Commands"
+.SH NAME
+poison \- a wlroots 0.21 compositor inspired by Ratpoison
+.SH CONFIGURATION
+Read from
+.I $HOME/.poison.rc
+at startup. # comments outside quotes are allowed. Can be key=value, key="value", key value, or key "value".
+.TP
+.B exec COMMAND
+Execute a shell command on startup. Can be used multiple times. No need for &; it will fork.
+.TP
+.B hacks 0|1
+LD_PRELOAD hack via poison-filter.so to intercept libwayland-client.so warnings out of our control. Also tries to break libdecor since it doesn't respect our decoration preferences. Default is 0 (disabled).
+.TP
+.B idle_timeout MILLISECONDS
+Milliseconds before the screen blanks. 0 to disable. Default is 300000 (5 minutes).
+.TP
+.B hot_corner 1|0
+Enable the mouse to raise the window selector at the top left. Default is 1 (enabled).
+.TP
+.B hot_corner_threshold
+How much "force" is needed to raise the window selector with the mouse. Default is 600.
+.TP
+.B notifications 0|1
+Run our own notification daemon. Left click to dismiss the notification and raise the offending window or right click to just dismiss it. Default is 0 (disabled).
+.TP
+.B padding PIXELS
+Set the window padding in pixels. This adds an equal margin around all windows. Default is 5 pixels.
+.TP
+.B terminal COMMAND
+Set the terminal emulator command to launch with Super+Return. Defaults to poison-terminal --maximize. poison-terminal has a fake transparency feature in Settings. No need for &; it will fork.
+.TP
+.B volume_up COMMAND
+Command run when the XF86AudioRaiseVolume key is pressed. Defaults to wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ (WirePlumber/PipeWire). On bare PulseAudio use e.g. pactl set-sink-volume @DEFAULT_SINK@ +5%. No need for &; it will fork.
+.TP
+.B volume_down COMMAND
+Command run when the XF86AudioLowerVolume key is pressed. Defaults to wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%-.
+.TP
+.B mute COMMAND
+Command run when the XF86AudioMute key is pressed. Defaults to wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle.
+.PP
+.SH KEYBINDINGS
+All keybindings are hardcoded:
+.TP
+.B Ctrl+Alt+Backspace
+Exit the compositor.
+.TP
+.B Super+Escape
+Close the currently focused window.
+.TP
+.B Super+Tab
+Open the window selector (poison-window-selector) to switch between windows. Hold shift to cosmetically reorder them and Escape to cancel.
+.TP
+.B Super+p
+Open the application launcher (poison-launcher). Heavily inspired by tofi-drun.
+.TP
+.B Super+Shift+i
+Toggle the log console that catches curated errors.
+.TP
+.B Super+Return
+Launch a terminal emulator if we can find one.
+.TP
+.B Super+f
+Toggle window floating and fullscreen state. Might be necessary for applications that want to dynamically adjust their geometry. Ignored in a split for sanity reasons.
+.TP
+.B XF86AudioRaiseVolume, XF86AudioLowerVolume, XF86AudioMute
+Run the volume_up, volume_down, and mute commands respectively (see CONFIGURATION).
+.TP
+.B XF86Switch_VT_1 through XF86Switch_VT_12
+VT switch 1-12.
+.TP
+.B Super+h, Super+Left, Super+Right, Super+Shift+Left, Super+Shift+Right, Super+o
+Start a horizontal split (can create an empty "frame" on the other side as well with only one window present). Focus left or right or swap positions while holding Shift. Super+o to clear a split.
+.PP
+Note: The Super key is typically the Windows or Logo key.
+.SH FILES
+.TP
+.I $HOME/.poison.rc
+Poor XDG. :(
+.TP
+.I /usr/local/bin/poison
+The compositor binary.
+.TP
+.I /usr/local/bin/poison-launcher
+The application launcher.
+.TP
+.I /usr/local/bin/poison-console
+A log console in the style of stumpwm.
+.TP
+.I /usr/local/bin/poison-notify
+The custom notification daemon.
+.TP
+.I /usr/local/bin/poison-terminal
+The default terminal emulator.
+.TP
+.I /usr/local/bin/poison-window-selector
+The window selector.
+.TP
+.I /usr/local/lib/poison-filter.so
+A LD_PRELOAD hack to intercept libwayland-client.so warnings out of our control and libdecor breaker.
+.TP
+.I $HOME/.poison-terminal.rc
+The poison-terminal settings. Mostly fake transparency wallpaper stuff at the moment.

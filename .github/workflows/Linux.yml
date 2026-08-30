@@ -1,0 +1,70 @@
+name: poison
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: actions/checkout@v6
+        uses: actions/checkout@v6
+
+      - name: dependencies
+        run: |
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc git make pkg-config python3-pip
+          sudo apt-get install -y libpango1.0-dev libcairo2-dev libliftoff-dev libxcb-errors-dev
+          sudo apt-get install -y libvte-2.91-dev
+          sudo apt-get build-dep -y libdrm libxkbcommon wayland wayland-protocols wlroots
+
+          set -x
+
+          sudo apt-get purge -y meson
+          sudo pip3 install --force-reinstall meson
+
+          git clone --depth 1 https://gitlab.freedesktop.org/wayland/wayland.git
+          cd wayland
+          meson setup --prefix=/usr/local -Ddocumentation=false -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+          git clone --depth 1 https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+          cd wayland-protocols
+          meson setup --prefix=/usr/local -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+          git clone --depth 1 https://gitlab.freedesktop.org/mesa/libdrm.git
+          cd libdrm
+          meson setup --prefix=/usr/local -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+          git clone --depth 1 https://github.com/xkbcommon/libxkbcommon.git
+          cd libxkbcommon
+          meson setup --prefix=/usr/local -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+          git clone --depth 1 https://gitlab.freedesktop.org/pixman/pixman.git
+          cd pixman
+          meson setup --prefix=/usr/local -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+          git clone https://gitlab.freedesktop.org/wlroots/wlroots.git
+          cd wlroots
+          meson setup --prefix=/usr/local -Dlibdir=lib build
+          meson compile -C build
+          sudo ninja -C build install
+
+      - name: make
+        run: |
+          set -x
+          make
+          sudo make install

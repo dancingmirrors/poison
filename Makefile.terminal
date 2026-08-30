@@ -1,0 +1,29 @@
+CC      = cc
+CFLAGS  = -Wall -Wextra -O2 `pkg-config --cflags vte-2.91 fontconfig gdk-pixbuf-2.0`
+LDFLAGS = `pkg-config --libs vte-2.91 fontconfig gdk-pixbuf-2.0` -lm
+
+TARGET  = poison-terminal
+SRC     = poison-terminal.c
+
+PREFIX  = /usr/local
+BINDIR  = $(PREFIX)/bin
+DATADIR = $(PREFIX)/share/$(TARGET)
+
+.PHONY: all clean install uninstall
+
+all: $(TARGET)
+
+$(TARGET): $(SRC) poison-terminal.h
+	$(CC) $(CFLAGS) -o $@ $(SRC) $(LDFLAGS)
+
+install: $(TARGET)
+	mkdir -p $(BINDIR)
+	cp $(TARGET) $(BINDIR)/$(TARGET)
+	mkdir -p $(DATADIR)
+
+uninstall:
+	rm -f  $(BINDIR)/$(TARGET)
+	-rmdir $(DATADIR)
+
+clean:
+	rm -f $(TARGET)
