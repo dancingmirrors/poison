@@ -11,6 +11,8 @@ static void update_pointer_constraint(struct poison_server *server,
 static void deactivate_constraint_for_surface(struct poison_server *server,
                                               struct wlr_surface *surface);
 static void apply_xwayland_clip(struct poison_xwayland_view *view);
+static void queue_pointer_motion(struct poison_server *server,
+                                 uint32_t time_msec, double sx, double sy);
 
 static struct poison_server *sigchld_server;
 
@@ -513,6 +515,12 @@ static void apply_needs_retile(struct poison_toplevel *toplevel) {
     }
 }
 
+static uint32_t poison_now_msec(void) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (uint32_t)(now.tv_sec * 1000 + now.tv_nsec / 1000000);
+}
+
 static void update_cursor_focus(struct poison_server *server) {
     double sx, sy;
     struct wlr_surface *surface = NULL;
@@ -551,24 +559,28 @@ static void update_cursor_focus(struct poison_server *server) {
                 box.height = server->focused_toplevel->xdg_toplevel->current.height;
 
                 if (wlr_box_contains_point(&box, server->cursor->x, server->cursor->y)) {
+                    struct wlr_box geo =
+                        server->focused_toplevel->xdg_toplevel->base->geometry;
                     surface = server->focused_toplevel->xdg_toplevel->base->surface;
-                    sx = server->cursor->x - box.x;
-                    sy = server->cursor->y - box.y;
+                    sx = server->cursor->x - box.x + geo.x;
+                    sy = server->cursor->y - box.y + geo.y;
                 }
             }
         }
     }
 
     if (surface) {
-        if (server->seat->pointer_state.focused_surface &&
-            server->cursor_image.type == POISON_CURSOR_IMAGE_CLIENT) {
-            set_cursor_image(server, poison_cursor_image_xcursor("default"));
-        }
-        /* Make sure we don't revert to left_ptr. */
         if (server->seat->pointer_state.focused_surface == surface) {
-            wlr_seat_pointer_clear_focus(server->seat);
+            if (sx != server->seat->pointer_state.sx ||
+                sy != server->seat->pointer_state.sy) {
+                queue_pointer_motion(server, poison_now_msec(), sx, sy);
+            }
+        } else {
+            if (server->cursor_image.type == POISON_CURSOR_IMAGE_CLIENT) {
+                set_cursor_image(server, poison_cursor_image_xcursor("default"));
+            }
+            wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
         }
-        wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
     } else {
         if (server->cursor_image.type != POISON_CURSOR_IMAGE_CLIENT) {
             set_cursor_image(server, poison_cursor_image_xcursor("default"));
