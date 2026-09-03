@@ -13,6 +13,7 @@ static void deactivate_constraint_for_surface(struct poison_server *server,
 static void apply_xwayland_clip(struct poison_xwayland_view *view);
 static void queue_pointer_motion(struct poison_server *server,
                                  uint32_t time_msec, double sx, double sy);
+static void schedule_arrange(struct poison_server *server);
 
 static struct poison_server *sigchld_server;
 
@@ -56,15 +57,228 @@ static void kill_tracked_child(pid_t *pid_field) {
     sigprocmask(SIG_SETMASK, &old, NULL);
 }
 
+static struct poison_output *poison_output_from_wlr(
+    struct poison_server *server, struct wlr_output *wlr_output) {
+    struct poison_output *output;
+    wl_list_for_each(output, &server->outputs, link) {
+        if (output->wlr_output == wlr_output) {
+            return output;
+        }
+    }
+    return NULL;
+}
+
+static void poison_output_sync_layout(struct poison_output *output,
+                                      bool manual, int lx, int ly) {
+    struct poison_server *server = output->server;
+    struct wlr_output *wlr_output = output->wlr_output;
+
+    if (!wlr_output->enabled) {
+        wlr_output_layout_remove(server->output_layout, wlr_output);
+        return;
+    }
+
+    struct wlr_scene_output *scene_output =
+        wlr_scene_get_scene_output(server->scene, wlr_output);
+    bool have_layout =
+        wlr_output_layout_get(server->output_layout, wlr_output) != NULL;
+
+    if (have_layout && scene_output) {
+        if (manual) {
+            wlr_output_layout_add(server->output_layout, wlr_output, lx, ly);
+        }
+        return;
+    }
+
+    if (scene_output) {
+        wlr_scene_output_destroy(scene_output);
+    }
+    if (have_layout) {
+        wlr_output_layout_remove(server->output_layout, wlr_output);
+    }
+
+    struct wlr_output_layout_output *l_output = manual
+        ? wlr_output_layout_add(server->output_layout, wlr_output, lx, ly)
+        : wlr_output_layout_add_auto(server->output_layout, wlr_output);
+    if (!l_output) {
+        wlr_log(WLR_ERROR, "Failed to add output %s to the layout!",
+                wlr_output->name);
+        return;
+    }
+
+    scene_output = wlr_scene_output_create(server->scene, wlr_output);
+    if (!scene_output) {
+        wlr_log(WLR_ERROR, "Failed to create a scene output for %s!",
+                wlr_output->name);
+        wlr_output_layout_remove(server->output_layout, wlr_output);
+        return;
+    }
+
+    wlr_scene_output_layout_add_output(server->scene_layout, l_output,
+                                       scene_output);
+}
+
+static bool output_try_mode(struct wlr_output *wlr_output,
+                            struct wlr_output_mode *mode) {
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    wlr_output_state_set_enabled(&state, true);
+    if (mode != NULL) {
+        wlr_output_state_set_mode(&state, mode);
+    }
+
+    bool ok = wlr_output_test_state(wlr_output, &state) &&
+        wlr_output_commit_state(wlr_output, &state);
+
+    wlr_output_state_finish(&state);
+    return ok;
+}
+
+static bool output_enable_with_fallback(struct wlr_output *wlr_output) {
+    struct wlr_output_mode *preferred = wlr_output_preferred_mode(wlr_output);
+
+    if (preferred != NULL) {
+        if (output_try_mode(wlr_output, preferred)) {
+            return true;
+        }
+        wlr_log(WLR_ERROR, "Output %s rejected its preferred mode "
+                           "%dx%d@%.3f Hz.",
+                wlr_output->name, preferred->width, preferred->height,
+                preferred->refresh / 1000.0);
+    }
+
+    struct wlr_output_mode *mode;
+    wl_list_for_each(mode, &wlr_output->modes, link) {
+        if (preferred != NULL && mode == preferred) {
+            continue;
+        }
+        if (output_try_mode(wlr_output, mode)) {
+            wlr_log(WLR_INFO, "Output %s fell back to %dx%d@%.3f Hz.",
+                    wlr_output->name, mode->width, mode->height,
+                    mode->refresh / 1000.0);
+            return true;
+        }
+    }
+
+    return output_try_mode(wlr_output, NULL);
+}
+
+static void publish_output_configuration(struct poison_server *server) {
+    if (!server->output_manager) {
+        return;
+    }
+
+    struct wlr_output_configuration_v1 *config =
+        wlr_output_configuration_v1_create();
+    if (!config) {
+        wlr_log(WLR_ERROR, "Failed to allocate an output configuration!");
+        return;
+    }
+
+    struct poison_output *output;
+    wl_list_for_each(output, &server->outputs, link) {
+        struct wlr_output_configuration_head_v1 *head =
+            wlr_output_configuration_head_v1_create(config,
+                                                    output->wlr_output);
+        if (!head) {
+            wlr_log(WLR_ERROR, "Failed to allocate an output configuration "
+                               "head for %s!",
+                    output->wlr_output->name);
+            continue;
+        }
+
+        struct wlr_output_layout_output *l_output =
+            wlr_output_layout_get(server->output_layout, output->wlr_output);
+        if (l_output) {
+            head->state.x = l_output->x;
+            head->state.y = l_output->y;
+        }
+    }
+
+    wlr_output_manager_v1_set_configuration(server->output_manager, config);
+}
+
 void output_destroy(struct wl_listener *listener, void *data) {
     struct poison_output *output =
         wl_container_of(listener, output, destroy);
 
+    poison_render_output_finish(output);
+
     wl_list_remove(&output->frame.link);
     wl_list_remove(&output->destroy.link);
+    wl_list_remove(&output->request_state.link);
     wl_list_remove(&output->link);
 
     free(output);
+}
+
+void output_request_state(struct wl_listener *listener, void *data) {
+    struct poison_output *output =
+        wl_container_of(listener, output, request_state);
+    const struct wlr_output_event_request_state *event = data;
+
+    if (!wlr_output_commit_state(output->wlr_output, event->state)) {
+        wlr_log(WLR_ERROR, "Failed to commit the state requested for output "
+                           "%s.",
+                output->wlr_output->name);
+        return;
+    }
+
+    poison_output_sync_layout(output, false, 0, 0);
+    poison_render_request_repaint(output);
+}
+
+static void handle_renderer_lost(struct wl_listener *listener, void *data) {
+    struct poison_server *server =
+        wl_container_of(listener, server, renderer_lost);
+
+    poison_device_apply_env(&server->config);
+
+    struct wlr_renderer *renderer = wlr_renderer_autocreate(server->backend);
+    struct wlr_allocator *allocator =
+        renderer ? wlr_allocator_autocreate(server->backend, renderer) : NULL;
+
+    poison_device_clear_env();
+
+    if (renderer == NULL) {
+        wlr_log(WLR_ERROR, "Failed to re-create the renderer after GPU loss!");
+        return;
+    }
+    if (allocator == NULL) {
+        wlr_log(WLR_ERROR, "Failed to re-create the allocator after GPU loss!");
+        wlr_renderer_destroy(renderer);
+        return;
+    }
+
+    struct wlr_renderer *old_renderer = server->renderer;
+    struct wlr_allocator *old_allocator = server->allocator;
+
+    server->renderer = renderer;
+    server->allocator = allocator;
+
+    wl_list_remove(&server->renderer_lost.link);
+    wl_signal_add(&server->renderer->events.lost, &server->renderer_lost);
+
+    if (server->compositor) {
+        wlr_compositor_set_renderer(server->compositor, renderer);
+    }
+
+    struct poison_output *output;
+    wl_list_for_each(output, &server->outputs, link) {
+        if (!wlr_output_init_render(output->wlr_output, server->allocator,
+                                    server->renderer)) {
+            wlr_log(WLR_ERROR, "Failed to re-initialize rendering for output "
+                               "%s!",
+                    output->wlr_output->name);
+            continue;
+        }
+        poison_render_request_repaint(output);
+    }
+
+    wlr_allocator_destroy(old_allocator);
+    wlr_renderer_destroy(old_renderer);
+
+    poison_device_log_topology(server);
 }
 
 void server_new_output(struct wl_listener *listener, void *data) {
@@ -72,20 +286,19 @@ void server_new_output(struct wl_listener *listener, void *data) {
         wl_container_of(listener, server, new_output);
     struct wlr_output *wlr_output = data;
 
-    wlr_output_init_render(wlr_output, server->allocator,
-                           server->renderer);
-
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, true);
-
-    struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
-    if (mode != NULL) {
-        wlr_output_state_set_mode(&state, mode);
+    if (wlr_output->non_desktop) {
+        return;
     }
 
-    wlr_output_commit_state(wlr_output, &state);
-    wlr_output_state_finish(&state);
+    if (!wlr_output_init_render(wlr_output, server->allocator,
+                                server->renderer)) {
+        wlr_log(WLR_ERROR, "Failed to initialize rendering for output %s: "
+                           "leaving it disabled.",
+                wlr_output->name);
+        return;
+    }
+
+    poison_device_log_output(server, wlr_output);
 
     struct poison_output *output = calloc(1, sizeof(*output));
     if (!output) {
@@ -99,15 +312,18 @@ void server_new_output(struct wl_listener *listener, void *data) {
     wl_signal_add(&wlr_output->events.frame, &output->frame);
     output->destroy.notify = output_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
+    output->request_state.notify = output_request_state;
+    wl_signal_add(&wlr_output->events.request_state, &output->request_state);
 
     wl_list_insert(&server->outputs, &output->link);
 
-    struct wlr_output_layout_output *l_output =
-        wlr_output_layout_add_auto(server->output_layout, wlr_output);
-    struct wlr_scene_output *scene_output =
-        wlr_scene_output_create(server->scene, wlr_output);
-    wlr_scene_output_layout_add_output(server->scene_layout, l_output,
-                                       scene_output);
+    if (!output_enable_with_fallback(wlr_output)) {
+        wlr_log(WLR_ERROR, "Failed to enable output %s with any of its modes.",
+                wlr_output->name);
+        return;
+    }
+
+    poison_output_sync_layout(output, false, 0, 0);
 
     wlr_xcursor_manager_load(server->cursor_mgr, wlr_output->scale);
 }
@@ -132,42 +348,53 @@ void server_session_active(struct wl_listener *listener, void *data) {
 static bool apply_output_configuration(struct poison_server *server,
                                        struct wlr_output_configuration_v1 *config,
                                        bool test_only) {
-    struct wlr_output_configuration_head_v1 *head;
-
-    wl_list_for_each(head, &config->heads, link) {
-        struct wlr_output *o = head->state.output;
-        struct wlr_output_state state;
-        wlr_output_state_init(&state);
-        wlr_output_head_v1_state_apply(&head->state, &state);
-        bool ok = wlr_output_test_state(o, &state);
-        wlr_output_state_finish(&state);
-        if (!ok) {
-            return false;
-        }
-    }
-
-    if (test_only) {
+    if (wl_list_empty(&config->heads)) {
         return true;
     }
 
     bool ok = true;
+    struct wlr_output_configuration_head_v1 *head;
+
     wl_list_for_each(head, &config->heads, link) {
-        struct wlr_output *o = head->state.output;
         struct wlr_output_state state;
         wlr_output_state_init(&state);
         wlr_output_head_v1_state_apply(&head->state, &state);
-        if (!wlr_output_commit_state(o, &state)) {
-            ok = false;
-        }
+        ok = wlr_output_test_state(head->state.output, &state);
         wlr_output_state_finish(&state);
-
-        if (head->state.enabled) {
-            wlr_output_layout_add(server->output_layout, o,
-                                  head->state.x, head->state.y);
-        } else {
-            wlr_output_layout_remove(server->output_layout, o);
+        if (!ok) {
+            wlr_log(WLR_INFO, "Output %s cannot take the requested state.",
+                    head->state.output->name);
+            break;
         }
     }
+
+    if (test_only || !ok) {
+        return ok;
+    }
+
+    wl_list_for_each(head, &config->heads, link) {
+        struct wlr_output_state state;
+        wlr_output_state_init(&state);
+        wlr_output_head_v1_state_apply(&head->state, &state);
+        bool applied = wlr_output_commit_state(head->state.output, &state);
+        wlr_output_state_finish(&state);
+
+        if (!applied) {
+            wlr_log(WLR_ERROR, "Failed to commit state for output %s.",
+                    head->state.output->name);
+            ok = false;
+            continue;
+        }
+
+        /* XXX */
+        struct poison_output *output =
+            poison_output_from_wlr(server, head->state.output);
+        if (output) {
+            poison_output_sync_layout(output, true, head->state.x,
+                                      head->state.y);
+        }
+    }
+
     return ok;
 }
 
@@ -181,7 +408,9 @@ void output_manager_apply(struct wl_listener *listener, void *data) {
     } else {
         wlr_output_configuration_v1_send_failed(config);
     }
-    wlr_output_manager_v1_set_configuration(server->output_manager, config);
+    wlr_output_configuration_v1_destroy(config);
+
+    schedule_arrange(server);
 }
 
 void output_manager_test(struct wl_listener *listener, void *data) {
@@ -2932,6 +3161,164 @@ static struct wlr_box xwayland_view_tile_box(struct poison_xwayland_view *view) 
     return tile;
 }
 
+static void arrange_layer_surface(struct poison_layer_surface *layer_surface) {
+    struct wlr_layer_surface_v1 *wlr_layer_surface =
+        layer_surface->layer_surface;
+
+    if (!wlr_layer_surface->output || !layer_surface->scene_layer_surface) {
+        return;
+    }
+
+    struct wlr_box full_area = {
+        .x = 0,
+        .y = 0,
+        .width = wlr_layer_surface->output->width,
+        .height = wlr_layer_surface->output->height,
+    };
+    struct wlr_box usable_area = full_area;
+
+    wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface,
+                                         &full_area, &usable_area);
+
+    int lx, ly;
+    if (layer_surface->popup_tree &&
+        wlr_scene_node_coords(
+            &layer_surface->scene_layer_surface->tree->node, &lx, &ly)) {
+        wlr_scene_node_set_position(&layer_surface->popup_tree->node, lx, ly);
+    }
+}
+
+void poison_arrange_all(struct poison_server *server) {
+    struct wlr_box output_box;
+    wlr_output_layout_get_box(server->output_layout, NULL, &output_box);
+    if (output_box.width <= 0 || output_box.height <= 0) {
+        return;
+    }
+
+    struct poison_layer_surface *layer_surface;
+    wl_list_for_each(layer_surface, &server->layer_surfaces, link) {
+        arrange_layer_surface(layer_surface);
+    }
+
+    if (server->hsplit_active) {
+        apply_hsplit_layout(server);
+    }
+
+    int padding = server->config.padding;
+    int effective_padding = padding == 0 ? 1 : padding;
+
+    struct poison_toplevel *toplevel;
+    wl_list_for_each(toplevel, &server->toplevels, link) {
+        if (!toplevel->xdg_toplevel || !toplevel->scene_tree ||
+            !toplevel->xdg_toplevel->base->initialized ||
+            toplevel->in_hsplit) {
+            continue;
+        }
+
+        if (toplevel_fullscreen_now(toplevel)) {
+            wlr_xdg_toplevel_set_size(toplevel->xdg_toplevel,
+                                      output_box.width, output_box.height);
+            wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                        output_box.x, output_box.y);
+        } else if (toplevel->floating) {
+            center_toplevel(toplevel);
+        } else {
+            wlr_xdg_toplevel_set_tiled(toplevel->xdg_toplevel,
+                                       WLR_EDGE_TOP | WLR_EDGE_BOTTOM |
+                                           WLR_EDGE_LEFT | WLR_EDGE_RIGHT);
+            if (output_box.width > 2 * effective_padding &&
+                output_box.height > 2 * effective_padding) {
+                wlr_xdg_toplevel_set_size(
+                    toplevel->xdg_toplevel,
+                    output_box.width - 2 * effective_padding,
+                    output_box.height - 2 * effective_padding);
+            }
+            wlr_scene_node_set_position(&toplevel->scene_tree->node,
+                                        output_box.x + effective_padding,
+                                        output_box.y + effective_padding);
+        }
+    }
+
+    struct poison_xwayland_view *view;
+    wl_list_for_each(view, &server->xwayland_views, link) {
+        struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+        if (!xsurface || !xsurface->surface || !xsurface->surface->mapped ||
+            !view->scene_tree || view->in_hsplit) {
+            continue;
+        }
+
+        if (xsurface->fullscreen) {
+            wlr_scene_node_set_position(&view->scene_tree->node,
+                                        output_box.x, output_box.y);
+            wlr_xwayland_surface_configure(xsurface, output_box.x, output_box.y,
+                                           output_box.width, output_box.height);
+            set_xwayland_view_clip(view, NULL);
+            continue;
+        }
+
+        int width = xsurface->width;
+        int height = xsurface->height;
+        int x = output_box.x + padding;
+        int y = output_box.y + padding;
+
+        if (width > 0 && height > 0) {
+            int max_width = output_box.width - 2 * padding;
+            int max_height = output_box.height - 2 * padding;
+            if (max_width > 0 && width > max_width) {
+                width = max_width;
+            }
+            if (max_height > 0 && height > max_height) {
+                height = max_height;
+            }
+            x = output_box.x + (output_box.width - width) / 2;
+            y = output_box.y + (output_box.height - height) / 2;
+            constrain_position_to_output(&x, &y, width, height, &output_box,
+                                         padding);
+        }
+
+        wlr_scene_node_set_position(&view->scene_tree->node, x, y);
+        wlr_xwayland_surface_configure(xsurface, x, y, width, height);
+
+        if (view->floating) {
+            set_xwayland_view_clip(view, NULL);
+        } else {
+            struct wlr_box tile = xwayland_view_tile_box(view);
+            set_xwayland_view_clip(view, &tile);
+        }
+    }
+}
+
+static void arrange_idle_handler(void *data) {
+    struct poison_server *server = data;
+
+    server->arrange_idle = NULL;
+    poison_arrange_all(server);
+    publish_output_configuration(server);
+}
+
+static void schedule_arrange(struct poison_server *server) {
+    if (server->arrange_idle) {
+        return;
+    }
+
+    server->arrange_idle =
+        wl_event_loop_add_idle(wl_display_get_event_loop(server->wl_display),
+                               arrange_idle_handler, server);
+    if (!server->arrange_idle) {
+        wlr_log(WLR_ERROR, "Failed to defer the arrange: doing it now.");
+        poison_arrange_all(server);
+        publish_output_configuration(server);
+    }
+}
+
+static void handle_output_layout_change(struct wl_listener *listener,
+                                        void *data) {
+    struct poison_server *server =
+        wl_container_of(listener, server, output_layout_change);
+
+    schedule_arrange(server);
+}
+
 void xwayland_view_commit(struct wl_listener *listener, void *data) {
     struct poison_xwayland_view *xwayland_view =
         wl_container_of(listener, xwayland_view, commit);
@@ -3618,6 +4005,7 @@ void server_new_xwayland_surface(struct wl_listener *listener, void *data) {
 void layer_surface_destroy(struct wl_listener *listener, void *data) {
     struct poison_layer_surface *layer_surface =
         wl_container_of(listener, layer_surface, destroy);
+    wl_list_remove(&layer_surface->link);
     wl_list_remove(&layer_surface->destroy.link);
     wl_list_remove(&layer_surface->map.link);
     wl_list_remove(&layer_surface->unmap.link);
@@ -3707,24 +4095,8 @@ void layer_surface_commit(struct wl_listener *listener, void *data) {
     struct wlr_layer_surface_v1 *wlr_layer_surface =
         layer_surface->layer_surface;
 
-    if (wlr_layer_surface->current.committed != 0 && wlr_layer_surface->output) {
-        struct wlr_box full_area = {
-            .x = 0,
-            .y = 0,
-            .width = wlr_layer_surface->output->width,
-            .height = wlr_layer_surface->output->height,
-        };
-        struct wlr_box usable_area = full_area;
-
-        wlr_scene_layer_surface_v1_configure(layer_surface->scene_layer_surface, &full_area, &usable_area);
-
-        int lx, ly;
-        if (layer_surface->popup_tree &&
-            wlr_scene_node_coords(
-                &layer_surface->scene_layer_surface->tree->node, &lx, &ly)) {
-            wlr_scene_node_set_position(&layer_surface->popup_tree->node,
-                                        lx, ly);
-        }
+    if (wlr_layer_surface->current.committed != 0) {
+        arrange_layer_surface(layer_surface);
     }
 }
 
@@ -3798,6 +4170,7 @@ void server_new_layer_surface(struct wl_listener *listener, void *data) {
     }
     layer_surface->server = server;
     layer_surface->layer_surface = wlr_layer_surface;
+    wl_list_insert(&server->layer_surfaces, &layer_surface->link);
 
     layer_surface->destroy.notify = layer_surface_destroy;
     wl_signal_add(&wlr_layer_surface->events.destroy,
@@ -5253,6 +5626,11 @@ int main(int argc, char *argv[]) {
 
     poison_config_apply_filter(&server.config);
 
+    wl_list_init(&server.renderer_lost.link);
+    wl_list_init(&server.output_layout_change.link);
+
+    poison_device_apply_env(&server.config);
+
     server.window_selector_fd = -1;
     server.window_selector_event_source = NULL;
     server.window_selector_pid = 0;
@@ -5311,22 +5689,28 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Work out what the backend and renderer can actually do before we start
-     * advertising globals to clients. */
-    int drm_fd = wlr_backend_get_drm_fd(server.backend);
+    server.renderer_lost.notify = handle_renderer_lost;
+    wl_signal_add(&server.renderer->events.lost, &server.renderer_lost);
+
+    poison_device_clear_env();
+    poison_device_log_topology(&server);
+
+    int render_drm_fd = wlr_renderer_get_drm_fd(server.renderer);
     bool have_dmabuf =
         wlr_renderer_get_texture_formats(server.renderer,
                                          WLR_BUFFER_CAP_DMABUF) != NULL;
-    bool have_timeline = server.renderer->features.timeline;
+    bool have_timeline =
+        server.renderer->features.timeline && server.backend->features.timeline;
 
-    if (drm_fd < 0 || !have_dmabuf) {
-        wlr_log(WLR_INFO, "Running without GPU acceleration (drm_fd=%d, "
+    if (render_drm_fd < 0 || !have_dmabuf) {
+        wlr_log(WLR_INFO, "Running without GPU acceleration (render fd=%d, "
                           "dmabuf=%s): GPU-dependent protocols will be disabled.",
-                drm_fd, have_dmabuf ? "yes" : "no");
+                render_drm_fd, have_dmabuf ? "yes" : "no");
     }
 
     struct wlr_compositor *compositor =
         wlr_compositor_create(server.wl_display, 5, server.renderer);
+    server.compositor = compositor;
     wlr_subcompositor_create(server.wl_display);
     wlr_data_device_manager_create(server.wl_display);
     wlr_primary_selection_v1_device_manager_create(server.wl_display);
@@ -5353,14 +5737,22 @@ int main(int argc, char *argv[]) {
     server.presentation = wlr_presentation_create(server.wl_display, server.backend, 1);
 
     server.linux_drm_syncobj_manager = NULL;
-    if (drm_fd >= 0 && have_timeline) {
-        server.linux_drm_syncobj_manager =
-            wlr_linux_drm_syncobj_manager_v1_create(server.wl_display, 1,
-                                                    drm_fd);
+    server.syncobj_drm_fd = -1;
+    if (render_drm_fd >= 0 && have_timeline) {
+        server.syncobj_drm_fd = fcntl(render_drm_fd, F_DUPFD_CLOEXEC, 0);
+        if (server.syncobj_drm_fd < 0) {
+            wlr_log(WLR_ERROR, "Failed to duplicate the render device fd: "
+                               "skipping linux-drm-syncobj-v1.");
+        } else {
+            server.linux_drm_syncobj_manager =
+                wlr_linux_drm_syncobj_manager_v1_create(server.wl_display, 1,
+                                                        server.syncobj_drm_fd);
+        }
     } else {
         wlr_log(WLR_INFO, "Explicit synchronization unavailable "
-                          "(drm_fd=%d, timeline=%s): skipping linux-drm-syncobj-v1.",
-                drm_fd, have_timeline ? "yes" : "no");
+                          "(render fd=%d, timeline=%s): skipping "
+                          "linux-drm-syncobj-v1.",
+                render_drm_fd, have_timeline ? "yes" : "no");
     }
 
     size_t tf_len = 0, prim_len = 0;
@@ -5425,6 +5817,9 @@ int main(int argc, char *argv[]) {
         wlr_ext_output_image_capture_source_manager_v1_create(server.wl_display, 1);
 
     server.output_layout = wlr_output_layout_create(server.wl_display);
+    server.output_layout_change.notify = handle_output_layout_change;
+    wl_signal_add(&server.output_layout->events.change,
+                  &server.output_layout_change);
 
     server.xdg_output_manager =
         wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout);
@@ -5519,6 +5914,7 @@ int main(int argc, char *argv[]) {
     wlr_xdg_system_bell_v1_create(server.wl_display, 1);
     wlr_xdg_toplevel_tag_manager_v1_create(server.wl_display, 1);
 
+    wl_list_init(&server.layer_surfaces);
     server.layer_shell = wlr_layer_shell_v1_create(server.wl_display, 4);
     if (server.layer_shell) {
         server.new_layer_surface.notify = server_new_layer_surface;
@@ -5725,6 +6121,12 @@ int main(int argc, char *argv[]) {
     exit_code = 0;
 
 cleanup:
+    wl_list_remove(&server.output_layout_change.link);
+    if (server.arrange_idle) {
+        wl_event_source_remove(server.arrange_idle);
+        server.arrange_idle = NULL;
+    }
+
     poison_diag_finish(&server);
     kill_tracked_child(&server.notify_pid);
 
@@ -5813,6 +6215,8 @@ cleanup:
         wl_list_remove(&server.output_manager_test.link);
     }
 
+    wl_list_remove(&server.renderer_lost.link);
+
     if (server.idle_timer) {
         wl_event_source_remove(server.idle_timer);
     }
@@ -5831,6 +6235,11 @@ cleanup:
     }
     if (server.wl_display) {
         wl_display_destroy(server.wl_display);
+    }
+
+    if (server.syncobj_drm_fd >= 0) {
+        close(server.syncobj_drm_fd);
+        server.syncobj_drm_fd = -1;
     }
 
     poison_config_cleanup(&server.config);

@@ -86,6 +86,8 @@
 #define HSPLIT_GAP 5
 #define HOT_CORNER_THRESHOLD 600
 #define MAX_COMMIT_RETRIES 10
+#define COMMIT_RETRY_BASE_MS 50
+#define COMMIT_RETRY_MAX_MS 1000
 
 struct poison_config {
     int padding;
@@ -100,6 +102,9 @@ struct poison_config {
     int hot_corner_threshold;
     char *exec_commands[MAX_EXEC_COMMANDS];
     int exec_command_count;
+    char *drm_devices;
+    char *render_device;
+    char *renderer_name;
 };
 
 void poison_config_init(struct poison_config *config);
@@ -145,6 +150,8 @@ struct poison_server {
     struct wl_listener session_active;
     struct wlr_renderer *renderer;
     struct wlr_allocator *allocator;
+    struct wl_listener renderer_lost;
+    struct wlr_compositor *compositor;
     struct wlr_scene *scene;
     struct wlr_scene_output_layout *scene_layout;
 
@@ -180,11 +187,13 @@ struct poison_server {
 
     struct wlr_layer_shell_v1 *layer_shell;
     struct wl_listener new_layer_surface;
+    struct wl_list layer_surfaces;
 
     struct wlr_viewporter *viewporter;
     struct wlr_fractional_scale_manager_v1 *fractional_scale_manager;
     struct wlr_presentation *presentation;
     struct wlr_linux_drm_syncobj_manager_v1 *linux_drm_syncobj_manager;
+    int syncobj_drm_fd;
     struct wlr_linux_dmabuf_v1 *linux_dmabuf;
 
     struct wlr_idle_inhibit_manager_v1 *idle_inhibit_manager;
@@ -264,6 +273,8 @@ struct poison_server {
     struct wl_listener output_manager_test;
     struct wl_list outputs;
     struct wl_listener new_output;
+    struct wl_listener output_layout_change;
+    struct wl_event_source *arrange_idle;
 
     struct poison_toplevel *focused_toplevel;
     struct poison_toplevel *prev_focused_toplevel;
@@ -421,12 +432,15 @@ struct poison_output {
     struct wlr_output *wlr_output;
     struct wl_listener frame;
     struct wl_listener destroy;
+    struct wl_listener request_state;
     unsigned int commit_failures;
+    struct wl_event_source *retry_timer;
     /* Repaint on the next frame even if the scene thinks it is up to date. */
     bool force_repaint;
 };
 
 struct poison_layer_surface {
+    struct wl_list link;
     struct poison_server *server;
     struct wlr_layer_surface_v1 *layer_surface;
     struct wl_listener destroy;
@@ -512,6 +526,15 @@ void keyboard_handle_destroy(struct wl_listener *listener, void *data);
 
 void output_frame(struct wl_listener *listener, void *data);
 void output_destroy(struct wl_listener *listener, void *data);
+void output_request_state(struct wl_listener *listener, void *data);
+
+void poison_arrange_all(struct poison_server *server);
+
+void poison_device_apply_env(const struct poison_config *config);
+void poison_device_clear_env(void);
+void poison_device_log_topology(struct poison_server *server);
+void poison_device_log_output(struct poison_server *server,
+                              struct wlr_output *wlr_output);
 
 void focus_toplevel(struct poison_toplevel *toplevel);
 void focus_xwayland_view(struct poison_server *server,
@@ -591,6 +614,7 @@ void pointer_constraint_destroy(struct wl_listener *listener, void *data);
 void poison_render_init(struct poison_server *server);
 void poison_render_finish(struct poison_server *server);
 void poison_render_output_frame(struct wl_listener *listener, void *data);
+void poison_render_output_finish(struct poison_output *output);
 void poison_render_request_repaint(struct poison_output *output);
 
 #endif /* POISON_H */

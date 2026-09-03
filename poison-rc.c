@@ -16,6 +16,9 @@ void poison_config_init(struct poison_config *config) {
         strdup("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
     config->hacks_enabled = 0;
     config->notifications_enabled = 0;
+    config->drm_devices = NULL;
+    config->render_device = NULL;
+    config->renderer_name = NULL;
     config->hot_corner_enabled = 1;
     config->hot_corner_threshold = HOT_CORNER_THRESHOLD;
     config->exec_command_count = 0;
@@ -287,6 +290,53 @@ void poison_config_load(struct poison_config *config) {
                     config->hot_corner_threshold = (int)val;
                     wlr_log(WLR_INFO, "Config: hot_corner_threshold set to %d.", config->hot_corner_threshold);
                 }
+            } else if (strcmp(key, "drm_devices") == 0 ||
+                       strcmp(key, "render_device") == 0) {
+                char **target = (strcmp(key, "drm_devices") == 0)
+                    ? &config->drm_devices
+                    : &config->render_device;
+
+                bool valid = value[0] == '/';
+                for (const char *p = value; valid && *p != '\0'; p++) {
+                    if (*p == ':' && p[1] != '/') {
+                        valid = false;
+                    }
+                }
+
+                if (!valid) {
+                    wlr_log(WLR_ERROR, "Config: %s wants absolute device paths.", key);
+                } else {
+                    char *dup = strdup(value);
+                    if (dup) {
+                        if (*target) {
+                            free(*target);
+                        }
+                        *target = dup;
+                        wlr_log(WLR_INFO, "Config: %s set to '%s'.", key, *target);
+                    } else {
+                        wlr_log(WLR_ERROR, "Config: failed to allocate memory for %s!", key);
+                    }
+                }
+            } else if (strcmp(key, "renderer") == 0) {
+                if (strcmp(value, "gles2") != 0 &&
+                    strcmp(value, "vulkan") != 0 &&
+                    strcmp(value, "pixman") != 0) {
+                    wlr_log(WLR_ERROR, "Config: renderer must be one of "
+                                       "gles2, vulkan or pixman, not '%s'.",
+                            value);
+                } else {
+                    char *dup = strdup(value);
+                    if (dup) {
+                        if (config->renderer_name) {
+                            free(config->renderer_name);
+                        }
+                        config->renderer_name = dup;
+                        wlr_log(WLR_INFO, "Config: renderer set to '%s'.",
+                                config->renderer_name);
+                    } else {
+                        wlr_log(WLR_ERROR, "Config: failed to allocate memory for renderer!");
+                    }
+                }
             }
         }
     }
@@ -376,6 +426,21 @@ void poison_config_execute_commands(struct poison_config *config) {
 }
 
 void poison_config_cleanup(struct poison_config *config) {
+    if (config->drm_devices) {
+        free(config->drm_devices);
+        config->drm_devices = NULL;
+    }
+
+    if (config->render_device) {
+        free(config->render_device);
+        config->render_device = NULL;
+    }
+
+    if (config->renderer_name) {
+        free(config->renderer_name);
+        config->renderer_name = NULL;
+    }
+
     if (config->terminal_command) {
         free(config->terminal_command);
         config->terminal_command = NULL;

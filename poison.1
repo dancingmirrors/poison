@@ -6,6 +6,9 @@ Read from
 .I $HOME/.poison.rc
 at startup. # comments outside quotes are allowed. Can be key=value, key="value", key value, or key "value".
 .TP
+.B drm_devices PATH[:PATH...]
+Colon-separated list of DRM device nodes to try in preference order, e.g. /dev/dri/card1.
+.TP
 .B exec COMMAND
 Execute a shell command on startup. Can be used multiple times. No need for &; it will fork.
 .TP
@@ -26,6 +29,12 @@ Run our own notification daemon. Left click to dismiss the notification and rais
 .TP
 .B padding PIXELS
 Set the window padding in pixels. This adds an equal margin around all windows. Default is 5 pixels.
+.TP
+.B render_device PATH
+DRM device node the renderer draws on, e.g. /dev/dri/renderD128.
+.TP
+.B renderer gles2|vulkan|pixman
+Renderer to use.
 .TP
 .B terminal COMMAND
 Set the terminal emulator command to launch with Super+Return. Defaults to poison-terminal --maximize. poison-terminal has a fake transparency feature in Settings. No need for &; it will fork.

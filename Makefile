@@ -6,7 +6,7 @@ echo "unknown"
 
 CC?=cc
 PREFIX?=/usr/local
-PKGLIBS=pixman-1 wlroots-0.21 wayland-server xkbcommon
+PKGLIBS=pixman-1 wlroots-0.21 wayland-server xkbcommon libdrm
 CFLAGS+=-O3 -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing \
 `pkg-config --cflags ${PKGLIBS}` \
 -DVERSION=\"${VERSION}\" \
@@ -63,8 +63,8 @@ wlr-layer-shell-unstable-v1-client-protocol.c: wlr-layer-shell-unstable-v1.xml
 	$(WAYLAND_SCANNER) private-code \
 		wlr-layer-shell-unstable-v1.xml $@
 
-poison: poison.c poison-rc.c poison-render.c poison-split.c poison-debug.c poison.h $(PROTOCOLS)
-	$(CC) $(CFLAGS) -o poison poison.c poison-split.c poison-rc.c poison-render.c poison-debug.c $(LDFLAGS) -lm
+poison: poison.c poison-rc.c poison-render.c poison-split.c poison-debug.c poison-device.c poison.h $(PROTOCOLS)
+	$(CC) $(CFLAGS) -o poison poison.c poison-split.c poison-rc.c poison-render.c poison-debug.c poison-device.c $(LDFLAGS) -lm
 
 poison-launcher: poison-launcher.c wlr-layer-shell-unstable-v1-client-protocol.h wlr-layer-shell-unstable-v1-client-protocol.c xdg-shell-client-protocol.h xdg-shell-client-protocol.c
 	$(CC) $(LAUNCHER_CFLAGS) -o poison-launcher poison-launcher.c \
