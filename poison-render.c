@@ -20,6 +20,11 @@ void poison_render_init(struct poison_server *server) {
     if (server->color_manager) {
         wlr_scene_set_color_manager_v1(server->scene, server->color_manager);
     }
+
+    if (server->gamma_control_manager) {
+        wlr_scene_set_gamma_control_manager_v1(server->scene,
+                                               server->gamma_control_manager);
+    }
 }
 
 void poison_render_finish(struct poison_server *server) {

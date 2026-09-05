@@ -263,6 +263,11 @@ static void handle_renderer_lost(struct wl_listener *listener, void *data) {
         wlr_compositor_set_renderer(server->compositor, renderer);
     }
 
+    if (server->gamma_control_manager) {
+        server->gamma_control_manager->fallback_gamma_size =
+            renderer->features.output_color_transform ? GAMMA_FALLBACK_RAMP_SIZE : 0;
+    }
+
     struct poison_output *output;
     wl_list_for_each(output, &server->outputs, link) {
         if (!wlr_output_init_render(output->wlr_output, server->allocator,
@@ -5807,6 +5812,21 @@ int main(int argc, char *argv[]) {
     server.color_representation_manager =
         wlr_color_representation_manager_v1_create_with_renderer(server.wl_display, 1,
                                                                  server.renderer);
+
+    server.gamma_control_manager =
+        wlr_gamma_control_manager_v1_create(server.wl_display);
+    if (server.gamma_control_manager) {
+        if (server.renderer->features.output_color_transform) {
+            server.gamma_control_manager->fallback_gamma_size =
+                GAMMA_FALLBACK_RAMP_SIZE;
+        } else {
+            wlr_log(WLR_INFO, "Renderer cannot transform output colors: "
+                              "gamma control is limited to outputs with a "
+                              "hardware LUT.");
+        }
+    } else {
+        wlr_log(WLR_ERROR, "Failed to create gamma control manager.");
+    }
 
     server.tearing_control_manager = wlr_tearing_control_manager_v1_create(server.wl_display, 1);
 

@@ -40,6 +40,7 @@
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_fixes.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -88,6 +89,7 @@
 #define MAX_COMMIT_RETRIES 10
 #define COMMIT_RETRY_BASE_MS 50
 #define COMMIT_RETRY_MAX_MS 1000
+#define GAMMA_FALLBACK_RAMP_SIZE 1024
 
 struct poison_config {
     int padding;
@@ -206,6 +208,7 @@ struct poison_server {
 
     struct wlr_color_manager_v1 *color_manager;
     struct wlr_color_representation_manager_v1 *color_representation_manager;
+    struct wlr_gamma_control_manager_v1 *gamma_control_manager;
 
     struct wlr_tearing_control_manager_v1 *tearing_control_manager;
 
