@@ -71,7 +71,7 @@ static void schedule_commit_retry(struct poison_output *output) {
     }
 
     unsigned int delay = COMMIT_RETRY_BASE_MS;
-    for (unsigned int i = MAX_COMMIT_RETRIES + 1;
+    for (unsigned int i = 1;
          i < output->commit_failures && delay < COMMIT_RETRY_MAX_MS; i++) {
         delay *= 2;
     }
@@ -132,13 +132,7 @@ void poison_render_output_frame(struct wl_listener *listener, void *data) {
         if (output->commit_failures < UINT_MAX) {
             output->commit_failures++;
         }
-
-        if (output->commit_failures > MAX_COMMIT_RETRIES) {
-            schedule_commit_retry(output);
-        } else {
-            wlr_log(WLR_DEBUG, "Scene output commit failed. Scheduling a retry.");
-            wlr_output_schedule_frame(output->wlr_output);
-        }
+        schedule_commit_retry(output);
     }
 
     struct timespec now;
