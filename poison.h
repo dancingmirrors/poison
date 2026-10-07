@@ -452,6 +452,7 @@ struct poison_xwayland_view {
     struct wl_listener request_configure;
     struct wl_listener request_fullscreen;
     struct wl_listener request_maximize;
+    struct wl_listener request_minimize;
     struct wl_listener request_activate;
     struct wl_listener set_title;
     struct wl_listener associate;
@@ -680,6 +681,8 @@ void xwayland_view_request_configure(struct wl_listener *listener,
 void xwayland_view_request_fullscreen(struct wl_listener *listener,
                                       void *data);
 void xwayland_view_request_maximize(struct wl_listener *listener,
+                                    void *data);
+void xwayland_view_request_minimize(struct wl_listener *listener,
                                     void *data);
 void xwayland_view_request_activate(struct wl_listener *listener, void *data);
 void xwayland_view_set_title(struct wl_listener *listener, void *data);
