@@ -687,6 +687,7 @@ void xwayland_view_associate(struct wl_listener *listener, void *data);
 void xwayland_view_dissociate(struct wl_listener *listener, void *data);
 void xwayland_view_commit(struct wl_listener *listener, void *data);
 void toggle_float_xwayland_view(struct poison_xwayland_view *xwayland_view);
+void tile_xwayland_view(struct poison_xwayland_view *view);
 void toggle_maximize_xwayland_view(struct poison_xwayland_view *xwayland_view);
 void restore_xwayland_from_hsplit(struct poison_xwayland_view *xwayland_view);
 bool restore_xwayland_fullscreen_from_hsplit(

@@ -1495,15 +1495,9 @@ void toggle_float_xwayland_view(struct poison_xwayland_view *xwayland_view) {
 
     xwayland_view->floating = !xwayland_view->floating;
 
-    struct wlr_box output_box;
-    wlr_output_layout_get_box(xwayland_view->server->output_layout, NULL,
-                              &output_box);
-
     if (xwayland_view->floating) {
         float_xwayland_view(xwayland_view);
     } else {
-        int effective_padding = xwayland_view->server->config.padding == 0 ? 1 : xwayland_view->server->config.padding;
-
         /* Remember the floating size before we tile so we can restore it
          * later. At this point the surface still reports its floating size,
          * unless it's maximized, in which case saved_float_* already holds
@@ -1514,27 +1508,7 @@ void toggle_float_xwayland_view(struct poison_xwayland_view *xwayland_view) {
             xwayland_view->saved_float_height = xsurface->height;
         }
 
-        xwayland_view->maximized = false;
-        wlr_xwayland_surface_set_maximized(xsurface, false, false);
-
-        int x = output_box.x + effective_padding;
-        int y = output_box.y + effective_padding;
-        int width = output_box.width - 2 * effective_padding;
-        int height = output_box.height - 2 * effective_padding;
-
-        if (width > 0 && height > 0) {
-            wlr_xwayland_surface_configure(xsurface, x, y, width, height);
-            wlr_xwayland_surface_set_fullscreen(xsurface, true);
-
-            if (xwayland_view->scene_tree) {
-                wlr_scene_node_set_position(&xwayland_view->scene_tree->node, x, y);
-            }
-            struct wlr_box tile = {.x = x, .y = y, .width = width, .height = height};
-            set_xwayland_view_clip(xwayland_view, &tile);
-            poison_decoration_update_xwayland(xwayland_view);
-        } else {
-            wlr_log(WLR_ERROR, "Output dimensions too small!");
-        }
+        tile_xwayland_view(xwayland_view);
     }
 }
 
@@ -3544,6 +3518,41 @@ static struct wlr_box xwayland_view_tile_box(struct poison_xwayland_view *view) 
     return tile;
 }
 
+void tile_xwayland_view(struct poison_xwayland_view *view) {
+    if (!view || !view->xwayland_surface) {
+        return;
+    }
+    struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+    struct poison_server *server = view->server;
+
+    view->floating = false;
+    view->maximized = false;
+
+    struct wlr_box output_box;
+    wlr_output_layout_get_box(server->output_layout, NULL, &output_box);
+    int ep = server->config.padding == 0 ? 1 : server->config.padding;
+    struct wlr_box tile = {
+        .x = output_box.x + ep,
+        .y = output_box.y + ep,
+        .width = output_box.width - 2 * ep,
+        .height = output_box.height - 2 * ep,
+    };
+    if (tile.width <= 0 || tile.height <= 0) {
+        wlr_log(WLR_ERROR, "Output dimensions too small!");
+        return;
+    }
+
+    wlr_xwayland_surface_set_fullscreen(xsurface, false);
+    wlr_xwayland_surface_set_maximized(xsurface, true, true);
+    wlr_xwayland_surface_configure(xsurface, tile.x, tile.y, tile.width,
+                                   tile.height);
+    if (view->scene_tree) {
+        wlr_scene_node_set_position(&view->scene_tree->node, tile.x, tile.y);
+    }
+    set_xwayland_view_clip(view, &tile);
+    poison_decoration_update_xwayland(view);
+}
+
 static void arrange_layer_surface(struct poison_layer_surface *layer_surface) {
     struct wlr_layer_surface_v1 *wlr_layer_surface =
         layer_surface->layer_surface;
@@ -3641,6 +3650,11 @@ void poison_arrange_all(struct poison_server *server) {
             continue;
         }
 
+        if (!view->floating) {
+            tile_xwayland_view(view);
+            continue;
+        }
+
         if (view->maximized && maximize_xwayland_view(view)) {
             continue;
         }
@@ -3724,6 +3738,22 @@ void xwayland_view_commit(struct wl_listener *listener, void *data) {
     poison_decoration_update_xwayland(xwayland_view);
 }
 
+static bool xwayland_surface_wants_float(struct wlr_xwayland_surface *xsurface,
+                                         bool *transient, bool *fixed_size) {
+    *transient = xsurface->parent != NULL || xsurface->modal ||
+        (xsurface->window_type_len > 0 &&
+         !wlr_xwayland_surface_has_window_type(
+             xsurface, WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL));
+    xcb_size_hints_t *hints = xsurface->size_hints;
+    *fixed_size = hints != NULL &&
+        (hints->flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) &&
+        (hints->flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) &&
+        hints->min_width > 0 && hints->min_height > 0 &&
+        hints->min_width == hints->max_width &&
+        hints->min_height == hints->max_height;
+    return *transient || *fixed_size;
+}
+
 void xwayland_view_map(struct wl_listener *listener, void *data) {
     struct poison_xwayland_view *xwayland_view =
         wl_container_of(listener, xwayland_view, map);
@@ -3750,6 +3780,13 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
     }
     xwayland_view->clip_box = (struct wlr_box){0};
 
+    if ((xwayland_view->saved_float_width <= 0 ||
+         xwayland_view->saved_float_height <= 0) &&
+        xsurface->width > 0 && xsurface->height > 0) {
+        xwayland_view->saved_float_width = xsurface->width;
+        xwayland_view->saved_float_height = xsurface->height;
+    }
+
     wl_list_insert(&server->xwayland_views,
                    &xwayland_view->link);
     xwayland_view->order.serial = ++server->next_view_serial;
@@ -3760,6 +3797,10 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
                               &output_box);
 
     bool inhibit_focus = is_layer_exclusive_focused(server);
+
+    bool transient = false, fixed_size = false;
+    bool wants_float = xwayland_surface_wants_float(xsurface, &transient,
+                                                    &fixed_size);
 
     if (server->hsplit_active && xsurface->parent == NULL && !xsurface->modal) {
         if (xsurface->fullscreen) {
@@ -3802,15 +3843,7 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
         hsplit_place_xwayland(xwayland_view, server->hsplit_xwayland_views.prev);
         apply_hsplit_layout(server);
     } else if (xsurface->fullscreen) {
-        /* Mapped straight into fullscreen: leaving it should float the
-         * window at the size it asked for before it mapped. */
-        if (xwayland_view->floating) {
-            xwayland_view->pre_fullscreen_floating = true;
-            if (xsurface->width > 0 && xsurface->height > 0) {
-                xwayland_view->saved_float_width = xsurface->width;
-                xwayland_view->saved_float_height = xsurface->height;
-            }
-        }
+        xwayland_view->pre_fullscreen_floating = wants_float;
         xwayland_view->floating = false;
         wlr_scene_node_set_position(&xwayland_view->scene_tree->node,
                                     output_box.x, output_box.y);
@@ -3819,7 +3852,10 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
                                            output_box.width, output_box.height);
         }
         set_xwayland_view_clip(xwayland_view, NULL);
+    } else if (!wants_float) {
+        tile_xwayland_view(xwayland_view);
     } else {
+        xwayland_view->floating = true;
         struct poison_frame_insets insets =
             poison_xwayland_view_insets(xwayland_view);
         int x = output_box.x + server->config.padding + insets.left;
@@ -4125,6 +4161,8 @@ void xwayland_view_request_configure(struct wl_listener *listener, void *data) {
             }
         }
         set_xwayland_view_clip(xwayland_view, NULL);
+    } else if (!xwayland_view->floating) {
+        tile_xwayland_view(xwayland_view);
     } else {
         struct wlr_box output_box;
         wlr_output_layout_get_box(xwayland_view->server->output_layout, NULL,
@@ -4234,30 +4272,7 @@ void xwayland_view_request_fullscreen(struct wl_listener *listener,
     } else if (xwayland_view->floating) {
         float_xwayland_view(xwayland_view);
     } else {
-        struct poison_frame_insets insets =
-            poison_xwayland_view_insets(xwayland_view);
-        int padding = xwayland_view->server->config.padding;
-        int x = output_box.x + padding + insets.left;
-        int y = output_box.y + padding + insets.top;
-
-        if (xsurface->width > 0 && xsurface->height > 0 &&
-            output_box.width > 0 && output_box.height > 0) {
-            int frame_width = xsurface->width + insets.left + insets.right;
-            int frame_height = xsurface->height + insets.top + insets.bottom;
-            x = output_box.x + (output_box.width - frame_width) / 2;
-            y = output_box.y + (output_box.height - frame_height) / 2;
-            constrain_position_to_output(&x, &y, frame_width, frame_height,
-                                         &output_box, padding);
-            x += insets.left;
-            y += insets.top;
-        }
-
-        wlr_scene_node_set_position(&xwayland_view->scene_tree->node, x, y);
-        wlr_xwayland_surface_configure(xsurface, x, y,
-                                       xsurface->width, xsurface->height);
-        struct wlr_box tile = xwayland_view_tile_box(xwayland_view);
-        set_xwayland_view_clip(xwayland_view, &tile);
-        poison_decoration_update_xwayland(xwayland_view);
+        tile_xwayland_view(xwayland_view);
     }
 }
 
