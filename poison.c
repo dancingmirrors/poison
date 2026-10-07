@@ -3120,6 +3120,20 @@ void popup_reposition(struct wl_listener *listener, void *data) {
     output_box.x -= root_lx;
     output_box.y -= root_ly;
 
+    struct wlr_surface *parent = popup->xdg_popup->parent;
+    struct wlr_xdg_surface *xdg_surface;
+    while (parent != NULL &&
+           (xdg_surface = wlr_xdg_surface_try_from_wlr_surface(parent)) != NULL) {
+        if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP &&
+            xdg_surface->popup != NULL) {
+            parent = xdg_surface->popup->parent;
+        } else {
+            output_box.x += xdg_surface->geometry.x;
+            output_box.y += xdg_surface->geometry.y;
+            break;
+        }
+    }
+
     wlr_xdg_popup_unconstrain_from_box(popup->xdg_popup, &output_box);
 }
 
@@ -5418,14 +5432,59 @@ void keyboard_handle_key(struct wl_listener *listener, void *data) {
     }
 }
 
+static void update_seat_capabilities(struct poison_server *server) {
+    uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
+    if (!wl_list_empty(&server->keyboards)) {
+        caps |= WL_SEAT_CAPABILITY_KEYBOARD;
+    }
+    if (server->touch_device_count > 0) {
+        caps |= WL_SEAT_CAPABILITY_TOUCH;
+    }
+    wlr_seat_set_capabilities(server->seat, caps);
+}
+
 void keyboard_handle_destroy(struct wl_listener *listener, void *data) {
     struct poison_keyboard *keyboard =
         wl_container_of(listener, keyboard, destroy);
+    struct poison_server *server = keyboard->server;
     wl_list_remove(&keyboard->modifiers.link);
     wl_list_remove(&keyboard->key.link);
     wl_list_remove(&keyboard->destroy.link);
     wl_list_remove(&keyboard->link);
     free(keyboard);
+    if (server) {
+        update_seat_capabilities(server);
+    }
+}
+
+struct poison_touch_device {
+    struct poison_server *server;
+    struct wl_listener destroy;
+};
+
+static void touch_device_handle_destroy(struct wl_listener *listener, void *data) {
+    struct poison_touch_device *touch =
+        wl_container_of(listener, touch, destroy);
+    struct poison_server *server = touch->server;
+    wl_list_remove(&touch->destroy.link);
+    free(touch);
+    if (server->touch_device_count > 0) {
+        server->touch_device_count--;
+    }
+    update_seat_capabilities(server);
+}
+
+static void server_new_touch(struct poison_server *server,
+                             struct wlr_input_device *device) {
+    wlr_cursor_attach_input_device(server->cursor, device);
+    struct poison_touch_device *touch = calloc(1, sizeof(*touch));
+    if (!touch) {
+        return;
+    }
+    touch->server = server;
+    touch->destroy.notify = touch_device_handle_destroy;
+    wl_signal_add(&device->events.destroy, &touch->destroy);
+    server->touch_device_count++;
 }
 
 static void server_new_keyboard(struct poison_server *server,
@@ -5438,6 +5497,7 @@ static void server_new_keyboard(struct poison_server *server,
         wlr_log(WLR_ERROR, "Failed to allocate keyboard!");
         return;
     }
+    keyboard->server = server;
     keyboard->server = server;
     keyboard->wlr_keyboard = wlr_keyboard;
 
@@ -5492,17 +5552,13 @@ void server_new_input(struct wl_listener *listener, void *data) {
         server_new_pointer(server, device);
         break;
     case WLR_INPUT_DEVICE_TOUCH:
-        wlr_cursor_attach_input_device(server->cursor, device);
+        server_new_touch(server, device);
         break;
     default:
         break;
     }
 
-    uint32_t caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH;
-    if (!wl_list_empty(&server->keyboards)) {
-        caps |= WL_SEAT_CAPABILITY_KEYBOARD;
-    }
-    wlr_seat_set_capabilities(server->seat, caps);
+    update_seat_capabilities(server);
 }
 
 static void update_drag_icons(struct poison_server *server) {

@@ -275,6 +275,7 @@ struct poison_server {
     double grab_sx, grab_sy;
     double grab_lx, grab_ly;
 
+    int touch_device_count;
     bool pointer_motion_pending;
     uint32_t pointer_motion_time;
     double pointer_motion_sx;
