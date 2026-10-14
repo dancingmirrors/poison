@@ -1,0 +1,13 @@
+*-protocol.c
+*-protocol.h
+*.o
+*.so
+poison
+poison-check
+poison-console
+poison-indicator
+poison-launcher
+poison-notify
+poison-terminal
+poison-window-selector
+tests/poison-test
