@@ -68,4 +68,5 @@ jobs:
           set -x
           make
           sudo make install
-          make check || true
+          sudo ldconfig
+          LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH make check || true
