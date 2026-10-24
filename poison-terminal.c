@@ -384,9 +384,17 @@ static void noise_sync(void) {
 
 static gboolean on_window_draw(GtkWidget *widget, cairo_t *cr,
                                gpointer user_data) {
+    (void)widget;
     (void)user_data;
-    int w = gtk_widget_get_allocated_width(widget);
-    int h = gtk_widget_get_allocated_height(widget);
+    GdkRectangle area;
+
+    gtk_widget_get_allocation(terminal_widget, &area);
+    area.x -= PADDING_PX;
+    area.y -= PADDING_PX;
+    area.width += 2 * PADDING_PX;
+    area.height += 2 * PADDING_PX;
+    cairo_rectangle(cr, area.x, area.y, area.width, area.height);
+    cairo_clip(cr);
 
     if (cfg.static_noise > 0.0 && noise_tiles[0]) {
         draw_noise(cr);
@@ -395,12 +403,12 @@ static gboolean on_window_draw(GtkWidget *widget, cairo_t *cr,
     cairo_set_operator(cr, CAIRO_OPERATOR_DEST_OVER);
 
     if (cfg.use_fake_transparency) {
-        if (w != cached_win_w || h != cached_win_h) {
-            rebuild_wallpaper_surface(w, h);
+        if (area.width != cached_win_w || area.height != cached_win_h) {
+            rebuild_wallpaper_surface(area.width, area.height);
         }
 
         if (wallpaper_surf) {
-            cairo_set_source_surface(cr, wallpaper_surf, 0.0, 0.0);
+            cairo_set_source_surface(cr, wallpaper_surf, area.x, area.y);
             cairo_paint_with_alpha(cr, cfg.wallpaper_opacity);
         }
     }
