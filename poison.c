@@ -670,6 +670,10 @@ static void clamp_floating_toplevel(struct poison_toplevel *toplevel) {
         return;
     }
 
+    if (!wl_list_empty(&toplevel->xdg_toplevel->base->configure_list)) {
+        return;
+    }
+
     int width, height;
     toplevel_visible_size(toplevel, &width, &height);
     if (width <= 0 || height <= 0) {
