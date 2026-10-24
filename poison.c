@@ -465,7 +465,7 @@ static void constrain_position_to_output(int *x, int *y, int width, int height,
 }
 
 void poison_toplevel_set_tiling(struct poison_toplevel *toplevel, bool tiled,
-                                bool fills_output) {
+                                bool maximized) {
     if (!toplevel || !toplevel->xdg_toplevel) {
         return;
     }
@@ -474,7 +474,7 @@ void poison_toplevel_set_tiling(struct poison_toplevel *toplevel, bool tiled,
                                tiled ? (WLR_EDGE_TOP | WLR_EDGE_BOTTOM |
                                         WLR_EDGE_LEFT | WLR_EDGE_RIGHT)
                                      : WLR_EDGE_NONE);
-    wlr_xdg_toplevel_set_maximized(toplevel->xdg_toplevel, fills_output);
+    wlr_xdg_toplevel_set_maximized(toplevel->xdg_toplevel, maximized);
 }
 
 static void toplevel_visible_size(struct poison_toplevel *toplevel, int *width,
@@ -2781,15 +2781,25 @@ void toplevel_unmap(struct wl_listener *listener, void *data) {
     }
 }
 
-/* Intended to prevent click stealing at edges. */
-static void update_toplevel_clip(struct poison_toplevel *toplevel) {
+/* Intended to prevent click stealing at edges, and windows escaping the split dimensions. */
+void update_toplevel_clip(struct poison_toplevel *toplevel) {
     if (!toplevel || !toplevel->surface_tree || !toplevel->xdg_toplevel ||
         !toplevel->xdg_toplevel->base) {
         return;
     }
 
     struct wlr_box clip = {0};
-    if (!toplevel->floating && !toplevel_fullscreen_now(toplevel)) {
+    if (toplevel->in_hsplit) {
+        struct wlr_xdg_toplevel_configure *slot =
+            &toplevel->xdg_toplevel->scheduled;
+        clip = toplevel->xdg_toplevel->base->geometry;
+        if (slot->width > 0 && clip.width > slot->width) {
+            clip.width = slot->width;
+        }
+        if (slot->height > 0 && clip.height > slot->height) {
+            clip.height = slot->height;
+        }
+    } else if (!toplevel->floating && !toplevel_fullscreen_now(toplevel)) {
         clip = toplevel->xdg_toplevel->base->geometry;
     }
 
@@ -3095,7 +3105,8 @@ void toplevel_request_maximize(struct wl_listener *listener, void *data) {
     }
 
     if (toplevel->in_hsplit || toplevel_fullscreen_now(toplevel)) {
-        wlr_xdg_toplevel_set_maximized(xdg_toplevel, false);
+        /* A split keeps its windows maximized. */
+        wlr_xdg_toplevel_set_maximized(xdg_toplevel, toplevel->in_hsplit);
         return;
     }
 

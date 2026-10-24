@@ -148,7 +148,7 @@ void hsplit_place(struct poison_toplevel *toplevel, struct wl_list *pos) {
         wlr_xdg_toplevel_set_fullscreen(toplevel->xdg_toplevel, false);
     }
     /* So fullscreen windows don't escape the split. */
-    poison_toplevel_set_tiling(toplevel, true, false);
+    poison_toplevel_set_tiling(toplevel, true, true);
     if (toplevel->floating) {
         toplevel->pre_hsplit_floating = true;
     }
@@ -254,6 +254,7 @@ void apply_hsplit_layout(struct poison_server *server) {
         if (wins[i].xdg) {
             struct poison_toplevel *tl = wins[i].xdg;
             poison_toplevel_apply_box(tl, x, y, slot_width, height);
+            update_toplevel_clip(tl);
             wlr_scene_node_raise_to_top(&tl->scene_tree->node);
         } else {
             struct poison_xwayland_view *xwv = wins[i].xw;

@@ -650,8 +650,9 @@ void view_order_arrange(struct poison_server *server,
                         struct poison_view_order **wanted, int n);
 void restore_toplevel_from_hsplit(struct poison_toplevel *toplevel);
 bool toplevel_fullscreen_now(struct poison_toplevel *toplevel);
+void update_toplevel_clip(struct poison_toplevel *toplevel);
 void poison_toplevel_set_tiling(struct poison_toplevel *toplevel, bool tiled,
-                                bool fills_output);
+                                bool maximized);
 bool restore_toplevel_fullscreen_from_hsplit(struct poison_toplevel *toplevel);
 void cycle_toplevel(struct poison_server *server, bool reverse);
 void close_toplevel(struct poison_toplevel *toplevel);
