@@ -1,4 +1,4 @@
-VERSION=0.94
+VERSION=0.95
 
 GIT_SHA!=[ -d .git ] && \
 git rev-parse HEAD 2>/dev/null || \
