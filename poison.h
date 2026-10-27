@@ -84,6 +84,7 @@
 
 #define MAX_EXEC_COMMANDS 32
 #define POISON_PADDING 5
+#define POISON_TRAY_FLASH_MS 2000
 #define HSPLIT_GAP 5
 #define HOT_CORNER_THRESHOLD 600
 #define MAX_COMMIT_RETRIES 20
@@ -114,6 +115,8 @@ struct poison_config {
     char *mute_command;
     int hacks_enabled;
     int notifications_enabled;
+    int tray_enabled;
+    int tray_flash_ms;
     int hot_corner_enabled;
     int hot_corner_threshold;
     char *exec_commands[MAX_EXEC_COMMANDS];
@@ -331,6 +334,12 @@ struct poison_server {
     int hsplit_focused_slot;
     pid_t indicator_pid;
     pid_t notify_pid;
+    pid_t tray_pid;
+    bool xwayland_running;
+    bool tray_clicked;
+    uint32_t tray_click_msec;
+    int tray_click_x;
+    struct wlr_box tray_click_box;
 
     pid_t console_pid;
     int console_fd;
@@ -483,6 +492,10 @@ struct poison_xwayland_view {
 
     int saved_float_width;
     int saved_float_height;
+
+    bool by_tray;
+    int by_tray_x;
+    struct wlr_box by_tray_box;
 };
 
 struct poison_xwayland_unmanaged {

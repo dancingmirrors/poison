@@ -19,6 +19,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential gcc git make pkg-config python3-pip
           sudo apt-get install -y libpango1.0-dev libcairo2-dev libliftoff-dev libxcb-errors-dev
+          sudo apt-get install -y libxcb-composite0-dev libxcb-damage0-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-xfixes0-dev
           sudo apt-get install -y libvte-2.91-dev
           sudo apt-get build-dep -y libdrm libxkbcommon wayland wayland-protocols wlroots
 

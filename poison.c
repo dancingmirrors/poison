@@ -16,6 +16,9 @@ static void apply_xwayland_clip(struct poison_xwayland_view *view);
 static void queue_pointer_motion(struct poison_server *server,
                                  uint32_t time_msec, double sx, double sy);
 static void schedule_arrange(struct poison_server *server);
+static bool place_by_tray(struct poison_xwayland_view *view, int width,
+                          int height, struct wlr_box *output_box, int *x,
+                          int *y);
 
 static struct poison_server *sigchld_server;
 
@@ -31,6 +34,9 @@ static void handle_sigchld(int sig) {
             }
             if (pid == s->notify_pid) {
                 s->notify_pid = 0;
+            }
+            if (pid == s->tray_pid) {
+                s->tray_pid = 0;
             }
             if (pid == s->launcher_pid) {
                 s->launcher_pid = 0;
@@ -1036,7 +1042,12 @@ static void update_cursor_focus(struct poison_server *server) {
         }
     }
 
-    if (server->focused_toplevel && server->focused_toplevel->xdg_toplevel) {
+    struct wlr_xwayland_surface *xsurface =
+        surface ? wlr_xwayland_surface_try_from_wlr_surface(surface) : NULL;
+    bool over_windows = xsurface && xsurface->override_redirect;
+
+    if (!over_windows && server->focused_toplevel &&
+        server->focused_toplevel->xdg_toplevel) {
         bool found_focused_surface = false;
 
         if (node) {
@@ -1559,6 +1570,7 @@ void toggle_float_xwayland_view(struct poison_xwayland_view *xwayland_view) {
         return;
     }
 
+    xwayland_view->by_tray = false;
     xwayland_view->floating = !xwayland_view->floating;
 
     if (xwayland_view->floating) {
@@ -2474,6 +2486,72 @@ static void start_notification_daemon(struct poison_server *server) {
     } else {
         wlr_log(WLR_ERROR, "Failed to fork notification daemon!");
     }
+}
+
+static void start_tray(struct poison_server *server, bool show) {
+    if (!server->config.tray_enabled) {
+        return;
+    }
+    kill_tracked_child(&server->tray_pid);
+
+    char flash_ms[16];
+    snprintf(flash_ms, sizeof(flash_ms), "%d", server->config.tray_flash_ms);
+    char *argv[] = {"poison-tray", flash_ms, show ? "--show" : NULL, NULL};
+
+    sigset_t block, old;
+    sigemptyset(&block);
+    sigaddset(&block, SIGCHLD);
+    sigaddset(&block, SIGUSR1);
+    sigprocmask(SIG_BLOCK, &block, &old);
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        sigset_t mask = old;
+        sigaddset(&mask, SIGUSR1);
+        sigprocmask(SIG_SETMASK, &mask, NULL);
+
+        int devnull = open("/dev/null", O_RDWR);
+        if (devnull >= 0) {
+            dup2(devnull, STDIN_FILENO);
+            dup2(devnull, STDOUT_FILENO);
+            if (devnull > 2) {
+                close(devnull);
+            }
+        }
+
+        execvp("poison-tray", argv);
+        execv("/usr/local/bin/poison-tray", argv);
+        execv("./poison-tray", argv);
+        _exit(1);
+    }
+    if (pid > 0) {
+        server->tray_pid = pid;
+    }
+    sigprocmask(SIG_SETMASK, &old, NULL);
+
+    if (pid > 0) {
+        wlr_log(WLR_INFO, "Started system tray (pid %d).", pid);
+    } else {
+        wlr_log(WLR_ERROR, "Failed to fork system tray!");
+    }
+}
+
+static void toggle_tray(struct poison_server *server) {
+    if (server->tray_pid <= 0) {
+        if (server->xwayland_running) {
+            start_tray(server, true);
+        }
+        return;
+    }
+
+    sigset_t block, old;
+    sigemptyset(&block);
+    sigaddset(&block, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &block, &old);
+    if (server->tray_pid > 0) {
+        kill(server->tray_pid, SIGUSR1);
+    }
+    sigprocmask(SIG_SETMASK, &old, NULL);
 }
 
 static bool is_layer_exclusive_focused(struct poison_server *server) {
@@ -3534,6 +3612,9 @@ void server_xwayland_ready(struct wl_listener *listener, void *data) {
         wlr_xwayland_set_cursor(server->xwayland, buffer, xcursor->images[0]->hotspot_x,
                                 xcursor->images[0]->hotspot_y);
     }
+
+    server->xwayland_running = true;
+    start_tray(server, false);
 }
 
 static void map_xwayland_surface_with_buffer(struct wlr_surface *surface) {
@@ -3784,10 +3865,14 @@ void poison_arrange_all(struct poison_server *server) {
             }
             int frame_width = width + insets.left + insets.right;
             int frame_height = height + insets.top + insets.bottom;
-            x = output_box.x + (output_box.width - frame_width) / 2;
-            y = output_box.y + (output_box.height - frame_height) / 2;
-            constrain_position_to_output(&x, &y, frame_width, frame_height,
-                                         &output_box, padding);
+            if (!place_by_tray(view, frame_width, frame_height, &output_box,
+                               &x, &y)) {
+                x = output_box.x + (output_box.width - frame_width) / 2;
+                y = output_box.y + (output_box.height - frame_height) / 2;
+                constrain_position_to_output(&x, &y, frame_width,
+                                             frame_height, &output_box,
+                                             padding);
+            }
             x += insets.left;
             y += insets.top;
         }
@@ -3847,6 +3932,78 @@ void xwayland_view_commit(struct wl_listener *listener, void *data) {
 bool xwayland_surface_has_shown_parent(struct wlr_xwayland_surface *xsurface) {
     return xsurface->parent != NULL && xsurface->parent->surface != NULL &&
         xsurface->parent->surface->mapped;
+}
+
+static bool xwayland_surface_is_tray(struct wlr_xwayland_surface *xsurface) {
+    return xsurface->class && strcmp(xsurface->class, "poison-tray") == 0;
+}
+
+#define TRAY_MENU_DELAY_MS 1500
+
+static void note_tray_click(struct poison_server *server,
+                            struct wlr_surface *surface,
+                            enum wl_pointer_button_state state) {
+    struct wlr_xwayland_surface *xsurface =
+        surface ? wlr_xwayland_surface_try_from_wlr_surface(surface) : NULL;
+    if (!xsurface || !xwayland_surface_is_tray(xsurface)) {
+        if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+            server->tray_clicked = false;
+        }
+        return;
+    }
+    if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        server->tray_clicked = true;
+    } else if (!server->tray_clicked) {
+        return;
+    }
+    server->tray_click_msec = poison_now_msec();
+    server->tray_click_x = (int)server->cursor->x;
+    server->tray_click_box = (struct wlr_box){
+        .x = xsurface->x,
+        .y = xsurface->y,
+        .width = xsurface->width,
+        .height = xsurface->height,
+    };
+}
+
+static void claim_tray_click(struct poison_xwayland_view *view) {
+    struct poison_server *server = view->server;
+    struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+    uint32_t bare = WLR_XWAYLAND_SURFACE_DECORATIONS_NO_BORDER |
+        WLR_XWAYLAND_SURFACE_DECORATIONS_NO_TITLE;
+    if (!server->tray_clicked || (xsurface->decorations & bare) != bare ||
+        !xsurface->skip_taskbar ||
+        poison_now_msec() - server->tray_click_msec > TRAY_MENU_DELAY_MS) {
+        return;
+    }
+    server->tray_clicked = false;
+    view->by_tray = true;
+    view->by_tray_x = server->tray_click_x;
+    view->by_tray_box = server->tray_click_box;
+}
+
+static bool place_by_tray(struct poison_xwayland_view *view, int width,
+                          int height, struct wlr_box *output_box, int *x,
+                          int *y) {
+    if (!view->by_tray) {
+        return false;
+    }
+    int padding = view->server->config.padding;
+    struct wlr_box *tray = &view->by_tray_box;
+    int menu_y = tray->y - padding - height;
+    if (menu_y < output_box->y + padding) {
+        menu_y = tray->y + tray->height + padding;
+        if (menu_y + height > output_box->y + output_box->height - padding) {
+            view->by_tray = false;
+            return false;
+        }
+    }
+    int menu_x = view->by_tray_x - width / 2;
+    constrain_position_to_output(&menu_x, &menu_y, width, height, output_box,
+                                 padding);
+    *x = menu_x;
+    *y = menu_y;
+    return true;
 }
 
 #define MWM_HINTS_FUNCTIONS (1u << 0)
@@ -3952,9 +4109,13 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
     bool transient = false, fixed_size = false;
     bool wants_float = xwayland_surface_wants_float(server, xsurface, &transient,
                                                     &fixed_size);
+    xwayland_view->by_tray = false;
+    if (wants_float) {
+        claim_tray_click(xwayland_view);
+    }
 
-    if (server->hsplit_active && !xwayland_surface_has_shown_parent(xsurface) &&
-        !xsurface->modal) {
+    if (server->hsplit_active && !xwayland_view->by_tray &&
+        !xwayland_surface_has_shown_parent(xsurface) && !xsurface->modal) {
         if (xsurface->fullscreen) {
             wlr_xwayland_surface_set_fullscreen(xsurface, false);
         }
@@ -4031,10 +4192,13 @@ void xwayland_view_map(struct wl_listener *listener, void *data) {
 
             int frame_width = width + insets.left + insets.right;
             int frame_height = height + insets.top + insets.bottom;
-            x = output_box.x + (output_box.width - frame_width) / 2;
-            y = output_box.y + (output_box.height - frame_height) / 2;
-            constrain_position_to_output(&x, &y, frame_width, frame_height,
-                                         &output_box, server->config.padding);
+            if (!place_by_tray(xwayland_view, frame_width, frame_height,
+                               &output_box, &x, &y)) {
+                x = output_box.x + (output_box.width - frame_width) / 2;
+                y = output_box.y + (output_box.height - frame_height) / 2;
+                constrain_position_to_output(&x, &y, frame_width, frame_height,
+                                             &output_box, server->config.padding);
+            }
             x += insets.left;
             y += insets.top;
         }
@@ -4344,10 +4508,13 @@ void xwayland_view_request_configure(struct wl_listener *listener, void *data) {
             }
             int frame_width = width + insets.left + insets.right;
             int frame_height = height + insets.top + insets.bottom;
-            x = output_box.x + (output_box.width - frame_width) / 2;
-            y = output_box.y + (output_box.height - frame_height) / 2;
-            constrain_position_to_output(&x, &y, frame_width, frame_height,
-                                         &output_box, padding);
+            if (!place_by_tray(xwayland_view, frame_width, frame_height,
+                               &output_box, &x, &y)) {
+                x = output_box.x + (output_box.width - frame_width) / 2;
+                y = output_box.y + (output_box.height - frame_height) / 2;
+                constrain_position_to_output(&x, &y, frame_width, frame_height,
+                                             &output_box, padding);
+            }
             x += insets.left;
             y += insets.top;
 
@@ -5542,6 +5709,12 @@ static bool handle_keybinding(struct poison_server *server,
         return true;
     }
 
+    if (super && sym == XKB_KEY_b && server->config.tray_enabled &&
+        server->xwayland) {
+        toggle_tray(server);
+        return true;
+    }
+
     if (super && sym == XKB_KEY_f) {
         if (server->focused_toplevel) {
             struct poison_toplevel *toplevel = server->focused_toplevel;
@@ -6284,6 +6457,8 @@ void server_cursor_button(struct wl_listener *listener, void *data) {
         }
     }
 
+    note_tray_click(server, surface, event->state);
+
     if (!surface && event->state == WL_POINTER_BUTTON_STATE_PRESSED &&
         event->button == BTN_LEFT) {
         handle_frame_click(server, node);
@@ -6697,6 +6872,7 @@ int main(int argc, char *argv[]) {
 
     server.indicator_pid = 0;
     server.notify_pid = 0;
+    server.tray_pid = 0;
 
     server.wl_display = wl_display_create();
     if (server.wl_display == NULL) {
@@ -7210,6 +7386,7 @@ cleanup:
     poison_decoration_finish(&server);
     poison_diag_finish(&server);
     kill_tracked_child(&server.notify_pid);
+    kill_tracked_child(&server.tray_pid);
 
     if (server.xcb) {
         xcb_disconnect(server.xcb);

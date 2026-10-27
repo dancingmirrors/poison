@@ -28,6 +28,7 @@ static const char base_rc[] =
     "idle_timeout \"0\"\n"
     "hot_corner \"0\"\n"
     "notifications \"0\"\n"
+    "tray \"0\"\n"
     "decorations \"1\"\n"
     "decoration_border_width \"2\"\n"
     "decoration_title_height \"20\"\n"
@@ -408,6 +409,21 @@ static pid_t start_compositor(const struct test_case *test, const char *dir,
     setenv("WLR_LIBINPUT_NO_DEVICES", "1", 1);
     setenv("ASAN_OPTIONS", "detect_leaks=0:abort_on_error=1:symbolize=1", 0);
     setenv("UBSAN_OPTIONS", "print_stacktrace=1", 0);
+
+    char built[PATH_MAX];
+    if (realpath(opts.compositor, built)) {
+        char *slash = strrchr(built, '/');
+        if (slash) {
+            *slash = '\0';
+            const char *path = getenv("PATH");
+            char *joined = NULL;
+            if (asprintf(&joined, "%s:%s", built,
+                         path ? path : "/usr/local/bin:/usr/bin:/bin") >= 0) {
+                setenv("PATH", joined, 1);
+                free(joined);
+            }
+        }
+    }
     set_env_pairs(test->opts.env);
 
     execl(opts.compositor, opts.compositor, (char *)NULL);

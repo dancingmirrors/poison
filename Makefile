@@ -24,6 +24,11 @@ NOTIFY_CFLAGS=-O3 -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing \
 `pkg-config --cflags ${NOTIFY_PKGLIBS}` -I.
 NOTIFY_LDFLAGS=`pkg-config --libs ${NOTIFY_PKGLIBS}`
 
+TRAY_PKGLIBS=xcb xcb-composite xcb-damage xcb-randr xcb-shape xcb-xfixes cairo-xcb pangocairo
+TRAY_CFLAGS=-O3 -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing \
+`pkg-config --cflags ${TRAY_PKGLIBS}` -I.
+TRAY_LDFLAGS=`pkg-config --libs ${TRAY_PKGLIBS}`
+
 WAYLAND_PROTOCOLS!=pkg-config --variable=pkgdatadir wayland-protocols
 WAYLAND_SCANNER!=pkg-config --variable=wayland_scanner wayland-scanner
 
@@ -35,7 +40,7 @@ TEST_CFLAGS=-O1 -g -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing \
 `pkg-config --cflags ${TEST_PKGLIBS}` -Itests
 TEST_LDFLAGS=`pkg-config --libs ${TEST_PKGLIBS}`
 TEST_SOURCES=	tests/runner.c tests/client.c tests/x11.c tests/image.c \
-		tests/test-xdg.c tests/test-xwayland.c
+		tests/test-xdg.c tests/test-xwayland.c tests/test-tray.c
 TEST_PROTOCOLS=	tests/xdg-shell-client-protocol.h \
 		tests/xdg-shell-protocol.c \
 		tests/xdg-decoration-unstable-v1-client-protocol.h \
@@ -56,7 +61,7 @@ PROTOCOLS=	xdg-shell-protocol.h \
 		wlr-layer-shell-unstable-v1-client-protocol.h \
 		xdg-shell-client-protocol.h
 
-all: $(PROTOCOLS) poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-window-selector
+all: $(PROTOCOLS) poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-tray poison-window-selector
 
 xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
@@ -110,6 +115,9 @@ poison-notify: poison-notify.c wlr-layer-shell-unstable-v1-client-protocol.h wlr
 		wlr-layer-shell-unstable-v1-client-protocol.c \
 		xdg-shell-client-protocol.c $(NOTIFY_LDFLAGS) -lm
 
+poison-tray: poison-tray.c
+	$(CC) $(TRAY_CFLAGS) -o poison-tray poison-tray.c $(TRAY_LDFLAGS)
+
 poison-check: poison.c poison-rc.c poison-render.c poison-split.c poison-debug.c poison-device.c poison-decoration.c poison.h $(PROTOCOLS)
 	$(CC) $(CFLAGS) $(CHECK_CFLAGS) -o poison-check poison.c poison-split.c poison-rc.c poison-render.c poison-debug.c poison-device.c poison-decoration.c $(LDFLAGS) -lm $(CHECK_SANITIZE)
 
@@ -158,7 +166,7 @@ tests/poison-test: $(TEST_SOURCES) tests/poison-test.h $(TEST_PROTOCOLS)
 		tests/ext-foreign-toplevel-list-v1-protocol.c \
 		$(TEST_LDFLAGS)
 
-check: poison-check tests/poison-test
+check: poison-check poison-tray tests/poison-test
 	./tests/poison-test --compositor ./poison-check $(CHECK_ARGS)
 
 poison-filter.so: poison-filter.c
@@ -177,6 +185,7 @@ install: all strip
 	cp poison-launcher $(BINDIR)/poison-launcher
 	cp poison-notify $(BINDIR)/poison-notify
 	cp poison-terminal $(BINDIR)/poison-terminal
+	cp poison-tray $(BINDIR)/poison-tray
 	cp poison-window-selector $(BINDIR)/poison-window-selector
 	cp poison $(BINDIR)/poison
 	cp poison-filter.so $(LIBDIR)/poison-filter.so
@@ -185,10 +194,10 @@ install: all strip
 	fc-cache -f
 
 strip: all
-	strip poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-window-selector
+	strip poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-tray poison-window-selector
 
 clean:
-	rm -f poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-window-selector $(PROTOCOLS) wlr-layer-shell-unstable-v1-client-protocol.c xdg-shell-client-protocol.c
+	rm -f poison poison-filter.so poison-console poison-indicator poison-launcher poison-notify poison-terminal poison-tray poison-window-selector $(PROTOCOLS) wlr-layer-shell-unstable-v1-client-protocol.c xdg-shell-client-protocol.c
 	rm -f poison-check tests/poison-test $(TEST_PROTOCOLS)
 
 uninstall:
@@ -199,6 +208,7 @@ uninstall:
 	rm -f ${BINDIR}/poison-launcher
 	rm -f ${BINDIR}/poison-notify
 	rm -f ${BINDIR}/poison-terminal
+	rm -f ${BINDIR}/poison-tray
 	rm -f ${BINDIR}/poison-window-selector
 	rm -f $(FONTDIR)/poison.ttf
 	rm -f $(MANDIR)/poison.1

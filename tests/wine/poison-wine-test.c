@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,10 @@
 #define SPLASH_COLOR RGB(0xd0, 0x80, 0x20)
 #define PROMOTED_COLOR RGB(0x80, 0x40, 0xb0)
 #define APP_COLOR RGB(0xe0, 0x80, 0xa0)
+#define TRAY_PIXEL 0xff30b040
+
+#define WM_TRAY_ICON (WM_APP + 1)
+#define TRAY_MENU_HELLO 1
 
 static HINSTANCE instance;
 static HWND main_window;
@@ -221,6 +226,148 @@ static void splash(HWND splash_window) {
     DestroyWindow(splash_window);
 }
 
+static bool tray_custom_menu;
+static HWND tray_menu;
+
+static LRESULT CALLBACK tray_menu_proc(HWND hwnd, UINT msg, WPARAM wparam,
+                                       LPARAM lparam) {
+    switch (msg) {
+    case WM_LBUTTONUP:
+        say("TRAY MENU HELLO");
+        ShowWindow(hwnd, SW_HIDE);
+        return 0;
+    case WM_ACTIVATE:
+        if (LOWORD(wparam) == WA_INACTIVE) {
+            ShowWindow(hwnd, SW_HIDE);
+        }
+        break;
+    }
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
+}
+
+static void show_tray_menu(void) {
+    const int width = 180, height = 60;
+    if (!tray_menu) {
+        WNDCLASSW wc = {0};
+        wc.lpfnWndProc = tray_menu_proc;
+        wc.hInstance = instance;
+        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hbrBackground = CreateSolidBrush(POPUP_COLOR);
+        wc.lpszClassName = L"PoisonTrayMenu";
+        RegisterClassW(&wc);
+        tray_menu = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+                                    L"PoisonTrayMenu", L"", WS_POPUP, 0, 0,
+                                    width, height, NULL, NULL, instance, NULL);
+    }
+    POINT pt;
+    GetCursorPos(&pt);
+    SetWindowPos(tray_menu, HWND_TOPMOST, pt.x - width, pt.y - height, width,
+                 height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    SetForegroundWindow(tray_menu);
+    SetWindowPos(tray_menu, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    RECT rect;
+    GetWindowRect(tray_menu, &rect);
+    char line[128];
+    snprintf(line, sizeof(line), "TRAY MENU SHOWN %ld,%ld %ldx%ld", rect.left,
+             rect.top, rect.right - rect.left, rect.bottom - rect.top);
+    say_line(line);
+}
+
+static LRESULT CALLBACK tray_proc(HWND hwnd, UINT msg, WPARAM wparam,
+                                  LPARAM lparam) {
+    if (msg != WM_TRAY_ICON) {
+        return DefWindowProcW(hwnd, msg, wparam, lparam);
+    }
+    switch (LOWORD(lparam)) {
+    case WM_LBUTTONDOWN:
+        say("TRAY LBUTTONDOWN");
+        break;
+    case WM_LBUTTONUP:
+        say("TRAY LBUTTONUP");
+        break;
+    case WM_RBUTTONUP: {
+        say("TRAY RBUTTONUP");
+        if (tray_custom_menu) {
+            show_tray_menu();
+            break;
+        }
+        POINT pt;
+        GetCursorPos(&pt);
+        HMENU menu = CreatePopupMenu();
+        AppendMenuW(menu, MF_STRING, TRAY_MENU_HELLO, L"Hello from the tray");
+        SetForegroundWindow(hwnd);
+        UINT id = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                                 pt.x, pt.y, 0, hwnd, NULL);
+        DestroyMenu(menu);
+        say(id == TRAY_MENU_HELLO ? "TRAY MENU HELLO" : "TRAY MENU NONE");
+        break;
+    }
+    }
+    return 0;
+}
+
+static HICON create_tray_icon(void) {
+    enum { SIZE = 16 };
+    BITMAPINFO info = {0};
+    info.bmiHeader.biSize = sizeof(info.bmiHeader);
+    info.bmiHeader.biWidth = SIZE;
+    info.bmiHeader.biHeight = -SIZE;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    void *bits = NULL;
+    HDC screen = GetDC(NULL);
+    HBITMAP color = CreateDIBSection(screen, &info, DIB_RGB_COLORS, &bits,
+                                     NULL, 0);
+    ReleaseDC(NULL, screen);
+    uint32_t *pixels = bits;
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++) {
+            int dx = 2 * x + 1 - SIZE, dy = 2 * y + 1 - SIZE;
+            pixels[y * SIZE + x] =
+                dx * dx + dy * dy <= SIZE * SIZE ? TRAY_PIXEL : 0;
+        }
+    }
+    HBITMAP mask = CreateBitmap(SIZE, SIZE, 1, 1, NULL);
+    ICONINFO icon_info = {TRUE, 0, 0, mask, color};
+    HICON icon = CreateIconIndirect(&icon_info);
+    DeleteObject(mask);
+    DeleteObject(color);
+    return icon;
+}
+
+static void tray(void) {
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = tray_proc;
+    wc.hInstance = instance;
+    wc.lpszClassName = L"PoisonTray";
+    RegisterClassW(&wc);
+    HWND owner = CreateWindowExW(0, L"PoisonTray", L"", WS_POPUP, 0, 0, 0, 0,
+                                 NULL, NULL, instance, NULL);
+
+    NOTIFYICONDATAW nid = {0};
+    nid.cbSize = sizeof(nid);
+    nid.hWnd = owner;
+    nid.uID = 1;
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = WM_TRAY_ICON;
+    nid.hIcon = create_tray_icon();
+    lstrcpynW(nid.szTip, L"Poison Wine test", ARRAYSIZE(nid.szTip));
+    say(Shell_NotifyIconW(NIM_ADD, &nid) ? "TRAY ADDED" : "TRAY FAILED");
+    pump(1500);
+
+    nid.uFlags = NIF_STATE;
+    nid.dwState = NIS_HIDDEN;
+    nid.dwStateMask = NIS_HIDDEN;
+    Shell_NotifyIconW(NIM_MODIFY, &nid);
+    say("TRAY HIDDEN");
+    pump(1500);
+
+    nid.dwState = 0;
+    Shell_NotifyIconW(NIM_MODIFY, &nid);
+    say("TRAY SHOWN");
+}
+
 int main(int argc, char **argv) {
     const char *scenario = argc > 1 ? argv[1] : "main";
     instance = GetModuleHandleW(NULL);
@@ -265,6 +412,13 @@ int main(int argc, char **argv) {
         layered();
     } else if (strcmp(scenario, "splash") == 0) {
         splash(splash_window);
+    } else if (strcmp(scenario, "tray") == 0) {
+        tray();
+    } else if (strcmp(scenario, "tray-popup") == 0) {
+        tray_custom_menu = true;
+        tray();
+        pump(1000);
+        show_tray_menu();
     } else if (strcmp(scenario, "minimize") == 0) {
         ShowWindow(main_window, SW_MINIMIZE);
         pump(800);

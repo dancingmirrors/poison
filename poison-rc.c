@@ -64,6 +64,8 @@ void poison_config_init(struct poison_config *config) {
         strdup("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
     config->hacks_enabled = 0;
     config->notifications_enabled = 0;
+    config->tray_enabled = 1;
+    config->tray_flash_ms = POISON_TRAY_FLASH_MS;
     config->drm_devices = NULL;
     config->render_device = NULL;
     config->renderer_name = NULL;
@@ -339,6 +341,20 @@ void poison_config_load(struct poison_config *config) {
                 if (*endptr == '\0' && (val == 0 || val == 1)) {
                     config->notifications_enabled = (int)val;
                     wlr_log(WLR_INFO, "Config: notifications set to %d.", config->notifications_enabled);
+                }
+            } else if (strcmp(key, "tray") == 0) {
+                char *endptr;
+                long val = strtol(value, &endptr, 10);
+                if (*endptr == '\0' && (val == 0 || val == 1)) {
+                    config->tray_enabled = (int)val;
+                    wlr_log(WLR_INFO, "Config: tray set to %d.", config->tray_enabled);
+                }
+            } else if (strcmp(key, "tray_flash") == 0) {
+                char *endptr;
+                long val = strtol(value, &endptr, 10);
+                if (*endptr == '\0' && val >= 0 && val <= 600000) {
+                    config->tray_flash_ms = (int)val;
+                    wlr_log(WLR_INFO, "Config: tray_flash set to %d ms.", config->tray_flash_ms);
                 }
             } else if (strcmp(key, "hot_corner") == 0) {
                 char *endptr;

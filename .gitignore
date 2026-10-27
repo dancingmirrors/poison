@@ -9,5 +9,6 @@ poison-indicator
 poison-launcher
 poison-notify
 poison-terminal
+poison-tray
 poison-window-selector
 tests/poison-test

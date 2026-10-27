@@ -39,6 +39,12 @@ Renderer to use.
 .B terminal COMMAND
 Set the terminal emulator command to launch with Super+Return. Defaults to poison-terminal --maximize. poison-terminal has a fake transparency feature in Settings. No need for &; it will fork.
 .TP
+.B tray 1|0
+Run our own system tray (poison-tray) on XWayland. Default is 1 (enabled).
+.TP
+.B tray_flash MILLISECONDS
+How long the tray shows itself for when an icon shows up. Default is 2000 (2 seconds).
+.TP
 .B volume_up COMMAND
 Command run when the XF86AudioRaiseVolume key is pressed. Defaults to wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ (WirePlumber/PipeWire). On bare PulseAudio use e.g. pactl set-sink-volume @DEFAULT_SINK@ +5%. No need for &; it will fork.
 .TP
@@ -65,6 +71,9 @@ Open the application launcher (poison-launcher). Heavily inspired by tofi-drun.
 .TP
 .B Super+Shift+i
 Toggle the log console that catches curated errors.
+.TP
+.B Super+b
+Toggle the system tray, like Win+B on Windows. Pressing it while the tray is showing itself for a new icon keeps it up instead.
 .TP
 .B Super+Return
 Launch a terminal emulator if we can find one.
@@ -101,6 +110,9 @@ The custom notification daemon.
 .TP
 .I /usr/local/bin/poison-terminal
 The default terminal emulator.
+.TP
+.I /usr/local/bin/poison-tray
+The system tray for X11 programs. Sending it SIGUSR1 does what Super+b does.
 .TP
 .I /usr/local/bin/poison-window-selector
 The window selector.
