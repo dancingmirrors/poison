@@ -63,7 +63,7 @@ void poison_config_init(struct poison_config *config) {
     config->mute_command =
         strdup("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
     config->hacks_enabled = 0;
-    config->notifications_enabled = 0;
+    config->notifications_enabled = 1;
     config->tray_enabled = 1;
     config->tray_flash_ms = POISON_TRAY_FLASH_MS;
     config->drm_devices = NULL;
